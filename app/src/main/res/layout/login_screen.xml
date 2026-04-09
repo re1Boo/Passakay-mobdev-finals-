@@ -43,7 +43,7 @@
         android:id="@+id/tvAppName"
         android:layout_width="145dp"
         android:layout_height="28dp"
-        android:src="@drawable/login_PaSSakay"
+        android:src="@drawable/login_passakay"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginStart="40dp"
@@ -76,7 +76,7 @@
         android:id="@+id/tvWelcome"
         android:layout_width="116dp"
         android:layout_height="28dp"
-        android:src="@drawable/login_Welcome"
+        android:src="@drawable/login_welcome"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginStart="149dp"
@@ -132,3 +132,4 @@
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginStart="143dp"
         android:layout_marginTop="437dp" />
+</androidx.constraintlayout.widget.ConstraintLayout>
