@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "99007817362",
+    "firebase_url": "https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "passakay-c787c",
+    "storage_bucket": "passakay-c787c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:99007817362:android:bd1439030e03dee6d0684b",
+        "android_client_info": {
+          "package_name": "com.usc.passakay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "99007817362-patcm3tab9gpa8kh2ra72m1bfvm5b7ln.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfctHm14ypeZ7zhEnQ-1k6IwgWVk5c1A4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "99007817362-patcm3tab9gpa8kh2ra72m1bfvm5b7ln.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

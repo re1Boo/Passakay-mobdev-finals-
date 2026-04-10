@@ -6,15 +6,21 @@ public class User {
     private int courseId;
     private String role;
     private String status;
+    private String email;       // ← add this
+    private String studentId;   // ← add this
 
     public User() {}
 
-    public User(int userId, int departmentId, int courseId, String role, String status) {
+    public User(int userId, int departmentId, int courseId,
+                String role, String status,
+                String email, String studentId) {
         this.userId = userId;
         this.departmentId = departmentId;
         this.courseId = courseId;
         this.role = role;
         this.status = status;
+        this.email = email;
+        this.studentId = studentId;
     }
 
     public int getUserId() { return userId; }
@@ -31,4 +37,10 @@ public class User {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getStudentId() { return studentId; }
+    public void setStudentId(String studentId) { this.studentId = studentId; }
 }

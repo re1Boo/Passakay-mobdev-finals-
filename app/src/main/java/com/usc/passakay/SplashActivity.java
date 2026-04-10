@@ -1,4 +1,4 @@
-package com.usc.passakay; // change this to your actual package name
+package com.usc.passakay;
 
 import android.animation.ObjectAnimator;
 import android.content.Intent;
@@ -21,10 +21,14 @@ public class SplashActivity extends AppCompatActivity {
 
         animateDots(dot1, dot2, dot3);
 
+        // Run Seeder to populate database
+        DataSeeder seeder = new DataSeeder();
+        seeder.seedAll();
+
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             startActivity(new Intent(SplashActivity.this, MainActivity.class));
             finish();
-        }, 2500);
+        }, 3000); // Slightly longer delay to allow seeding to start
     }
 
     private void animateDots(View dot1, View dot2, View dot3) {

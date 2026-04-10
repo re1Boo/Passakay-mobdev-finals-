@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="ActiveIndicatorStyle">
+        <item name="android:color">#00c417</item>
+        <item name="android:alpha">0.5</item>
+        <item name="shapeAppearance">@style/ActiveIndicatorShape</item>
+    </style>
+
+    <style name="ActiveIndicatorShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+</resources>

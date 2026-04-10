@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.usc.passakay"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.usc.passakay"
@@ -28,9 +26,10 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
@@ -39,9 +38,15 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
-    implementation(libs.firebase.firestore)
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.database)
+
+    // Firebase BOM - manages all Firebase versions
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)        // ← Firebase Authentication
+    implementation(libs.firebase.database)    // ← Realtime Database
+
+    // Google Maps
+    implementation(libs.play.services.maps)   // ← keep only this one
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

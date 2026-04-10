@@ -36,13 +36,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="26dp" />
+        android:layout_marginTop="20dp" />
 
     <ImageView
         android:id="@+id/tvAppName"
-        android:layout_width="145dp"
+        android:layout_width="125dp"
         android:layout_height="28dp"
-        android:src="@drawable/login_passakay"
+        android:src="@drawable/passakay_name"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginStart="40dp"

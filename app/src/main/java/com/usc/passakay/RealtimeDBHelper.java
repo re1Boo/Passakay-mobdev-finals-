@@ -41,6 +41,55 @@ public class RealtimeDBHelper {
                 });
     }
 
+    public void getUserByStudentId(String studentId, Consumer<User> onSuccess, Consumer<String> onFailure) {
+        db.child("users").orderByChild("studentId").equalTo(studentId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            for (DataSnapshot child : snapshot.getChildren()) {
+                                User user = child.getValue(User.class);
+                                if (user != null) {
+                                    onSuccess.accept(user);
+                                    return;
+                                }
+                            }
+                        } else {
+                            onFailure.accept("Student ID not found");
+                        }
+                    }
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        onFailure.accept(error.getMessage());
+                    }
+                });
+    }
+
+    public void getUserByUid(String uid, Consumer<User> onSuccess, Consumer<String> onFailure) {
+        db.child("users").child(uid)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        User user = snapshot.getValue(User.class);
+                        if (user != null) {
+                            onSuccess.accept(user);
+                        } else {
+                            onFailure.accept("User not found");
+                        }
+                    }
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        onFailure.accept(error.getMessage());
+                    }
+                });
+    }
+
+    public void saveUserWithUid(String uid, User user, Runnable onSuccess, Consumer<String> onFailure) {
+        db.child("users").child(uid).setValue(user)
+                .addOnSuccessListener(a -> onSuccess.run())
+                .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
+    }
+
     // ─── COURSE ─────────────────────────────────────────
 
     public void addCourse(Course course, Runnable onSuccess, Consumer<String> onFailure) {
@@ -154,7 +203,26 @@ public class RealtimeDBHelper {
     }
 
     public void getTripsByDriver(int driverId, Consumer<List<Trip>> onSuccess, Consumer<String> onFailure) {
-        db.child("trips").orderByChild("driverId").equalTo(driverId)  // ← int overload
+        db.child("trips").orderByChild("driverId").equalTo(driverId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        List<Trip> list = new ArrayList<>();
+                        for (DataSnapshot child : snapshot.getChildren()) {
+                            Trip trip = child.getValue(Trip.class);
+                            if (trip != null) list.add(trip);
+                        }
+                        onSuccess.accept(list);
+                    }
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        onFailure.accept(error.getMessage());
+                    }
+                });
+    }
+
+    public void getTripsByPassenger(String passengerId, Consumer<List<Trip>> onSuccess, Consumer<String> onFailure) {
+        db.child("trips").orderByChild("passengerId").equalTo(passengerId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
