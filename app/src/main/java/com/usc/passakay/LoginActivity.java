@@ -32,7 +32,8 @@ public class LoginActivity extends AppCompatActivity {
 
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
-        db = FirebaseDatabase.getInstance().getReference();
+        // FIXED: Using specific regional URL for asia-southeast1
+        db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
         // Bind views
         etStudentId = findViewById(R.id.etStudentId);

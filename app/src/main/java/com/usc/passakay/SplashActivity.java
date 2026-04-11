@@ -26,7 +26,7 @@ public class SplashActivity extends AppCompatActivity {
         seeder.seedAll();
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            startActivity(new Intent(SplashActivity.this, MainActivity.class));
+            startActivity(new Intent(SplashActivity.this, LoginActivity.class));
             finish();
         }, 3000); // Slightly longer delay to allow seeding to start
     }

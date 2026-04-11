@@ -2,9 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Internet permission - required for Firebase -->
     <uses-permission android:name="android.permission.INTERNET" />
-
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -15,7 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Passakay">
 
-        <!-- Launcher Activity -->
+        <!-- Back to normal launch flow -->
         <activity
             android:name=".SplashActivity"
             android:exported="true">
@@ -30,7 +30,6 @@
         <activity android:name=".DriverHomeActivity" />
         <activity android:name=".PassengerHomeActivity" />
 
-        <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCfV5Mv8_dJMUu1pLgJmalC4yRRCLwqcKU"/>
