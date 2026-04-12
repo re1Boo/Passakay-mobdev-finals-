@@ -84,8 +84,8 @@
         android:layout_marginStart="115dp"
         android:layout_marginTop="359dp" />
 
-    <!-- Login Button -->
-    <Button
+    <!-- Updated Login Button -->
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnLogin"
         android:layout_width="115dp"
         android:layout_height="28dp"

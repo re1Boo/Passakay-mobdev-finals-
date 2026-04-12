@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "99007817362-cn9f3l79h15pd9nam7gcj5lkh044rv5p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.usc.passakay",
+            "certificate_hash": "001bd275aaccbd87945b1f9dd117ae0987333c3e"
+          }
+        },
+        {
           "client_id": "99007817362-patcm3tab9gpa8kh2ra72m1bfvm5b7ln.apps.googleusercontent.com",
           "client_type": 3
         }
