@@ -131,6 +131,8 @@ public class DataSeeder {
     private void seedUsers() {
         createUser("driver@passakay.com", "password123", "20000001", "driver");
         createUser("passenger@passakay.com", "password123", "21101234", "passenger");
+        // Admin user
+        createUser("admin@passakay.com", "admin123456", "00000001", "admin");
     }
 
     private void createUser(String email, String password, String studentId, String role) {

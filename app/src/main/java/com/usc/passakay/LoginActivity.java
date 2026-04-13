@@ -2,9 +2,9 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,6 +25,10 @@ public class LoginActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference db;
 
+    // Secret tap counter
+    private int tapCount = 0;
+    private static final int SECRET_TAPS = 7;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,24 +36,40 @@ public class LoginActivity extends AppCompatActivity {
 
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
-        // FIXED: Using specific regional URL for asia-southeast1
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
         // Bind views
-        etStudentId = findViewById(R.id.etStudentId);
-        etPassword  = findViewById(R.id.etPassword);
-        btnLogin    = findViewById(R.id.btnLogin);
+        etStudentId      = findViewById(R.id.etStudentId);
+        etPassword       = findViewById(R.id.etPassword);
+        btnLogin         = findViewById(R.id.btnLogin);
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
+        ImageView imgLogo = findViewById(R.id.imgLogo);
 
         // Check if already logged in
         if (mAuth.getCurrentUser() != null) {
             goToHome(mAuth.getCurrentUser().getUid());
+            return;
         }
 
+        // Login button
         btnLogin.setOnClickListener(v -> handleLogin());
 
-        btnCreateAccount.setOnClickListener(v -> {
-            startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
+        // Create account
+        btnCreateAccount.setOnClickListener(v ->
+                startActivity(new Intent(LoginActivity.this, RegisterActivity.class))
+        );
+
+        // Secret tap on logo → Admin login
+        imgLogo.setOnClickListener(v -> {
+            tapCount++;
+            int remaining = SECRET_TAPS - tapCount;
+            if (remaining <= 3 && remaining > 0) {
+                Toast.makeText(this, remaining + " more...", Toast.LENGTH_SHORT).show();
+            }
+            if (tapCount >= SECRET_TAPS) {
+                tapCount = 0;
+                startActivity(new Intent(LoginActivity.this, AdminLoginActivity.class));
+            }
         });
     }
 
@@ -57,7 +77,6 @@ public class LoginActivity extends AppCompatActivity {
         String studentId = etStudentId.getText().toString().trim();
         String password  = etPassword.getText().toString().trim();
 
-        // Validate inputs
         if (studentId.isEmpty()) {
             etStudentId.setError("Please enter your Student ID");
             etStudentId.requestFocus();
@@ -70,21 +89,22 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // Show loading
         btnLogin.setEnabled(false);
         btnLogin.setText("Logging in...");
 
-        // Find email by studentId in database
         db.child("users").orderByChild("studentId").equalTo(studentId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
                         if (snapshot.exists()) {
-                            // Get the user's email
                             for (DataSnapshot child : snapshot.getChildren()) {
                                 User user = child.getValue(User.class);
                                 if (user != null) {
-                                    // Login with email and password
+                                    // Block check
+                                    if ("blocked".equals(user.getStatus())) {
+                                        showError("Your account has been blocked. Please contact admin.");
+                                        return;
+                                    }
                                     loginWithEmail(user.getEmail(), password);
                                 }
                             }
@@ -106,13 +126,10 @@ public class LoginActivity extends AppCompatActivity {
                     String uid = authResult.getUser().getUid();
                     goToHome(uid);
                 })
-                .addOnFailureListener(e -> {
-                    showError("Invalid password");
-                });
+                .addOnFailureListener(e -> showError("Invalid password"));
     }
 
     private void goToHome(String uid) {
-        // Check user role then redirect
         db.child("users").child(uid)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -120,24 +137,28 @@ public class LoginActivity extends AppCompatActivity {
                         User user = snapshot.getValue(User.class);
                         if (user != null) {
                             Intent intent;
-                            if ("driver".equals(user.getRole())) {
-                                intent = new Intent(LoginActivity.this, DriverHomeActivity.class);
-                            } else {
-                                intent = new Intent(LoginActivity.this, PassengerHomeActivity.class);
+                            switch (user.getRole()) {
+                                case "driver":
+                                    intent = new Intent(LoginActivity.this, DriverHomeActivity.class);
+                                    break;
+                                case "admin":
+                                    intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
+                                    break;
+                                default:
+                                    intent = new Intent(LoginActivity.this, MainActivity.class);
+                                    break;
                             }
                             intent.putExtra("userId", uid);
                             startActivity(intent);
-                            finish(); // prevent going back to login
-                        } else {
-                            // Fallback to MainActivity if user data not found
-                            startActivity(new Intent(LoginActivity.this, MainActivity.class));
                             finish();
+                        } else {
+                            showError("User data not found");
                         }
                     }
 
                     @Override
                     public void onCancelled(DatabaseError error) {
-                        showError("Failed to get user data");
+                        showError("Failed to get user data: " + error.getMessage());
                     }
                 });
     }

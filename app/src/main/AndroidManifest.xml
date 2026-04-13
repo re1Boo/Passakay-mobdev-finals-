@@ -29,6 +29,8 @@
         <activity android:name=".RegisterActivity" />
         <activity android:name=".DriverHomeActivity" />
         <activity android:name=".PassengerHomeActivity" />
+        <activity android:name=".AdminLoginActivity" />
+        <activity android:name=".AdminDashboardActivity" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
