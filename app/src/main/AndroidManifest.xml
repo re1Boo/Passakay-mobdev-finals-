@@ -31,6 +31,7 @@
         <activity android:name=".PassengerHomeActivity" />
         <activity android:name=".AdminLoginActivity" />
         <activity android:name=".AdminDashboardActivity" />
+        <activity android:name=".ProfileActivity" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"

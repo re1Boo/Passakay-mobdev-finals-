@@ -47,6 +47,8 @@ dependencies {
     // Google Maps
     implementation(libs.play.services.maps)   // ← keep only this one
 
+    implementation(libs.circleimageview)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
