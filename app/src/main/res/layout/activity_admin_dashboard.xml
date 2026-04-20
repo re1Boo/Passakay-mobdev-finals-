@@ -6,23 +6,33 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Header -->
-    <LinearLayout
+    <!-- Header + Logout Button -->
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="#14D337"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
+        android:layout_height="75dp"
+        android:background="#FFFFFF">
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Passakay Admin"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold"/>
+        <ImageView
+            android:id="@+id/imgLogo"
+            android:layout_width="24dp"
+            android:layout_height="32dp"
+            android:src="@drawable/login_passakay_logo"
+            android:scaleType="fitXY"
+            android:contentDescription="Logo"
+            android:layout_marginStart="10dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/greenStripe"/>
+
+        <ImageView
+            android:id="@+id/tvAppName"
+            android:layout_width="145dp"
+            android:layout_height="28dp"
+            android:src="@drawable/passakay_name"
+            android:layout_marginStart="6dp"
+            app:layout_constraintStart_toEndOf="@id/imgLogo"
+            app:layout_constraintTop_toTopOf="@id/imgLogo"
+            app:layout_constraintBottom_toBottomOf="@id/imgLogo"/>
 
         <Button
             android:id="@+id/btnLogout"
@@ -31,9 +41,34 @@
             android:text="Logout"
             android:textSize="12sp"
             android:textColor="#14D337"
-            android:background="#FFFFFF"/>
+            android:background="@drawable/rounded_input_bg"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:layout_marginEnd="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/greenStripe"/>
 
-    </LinearLayout>
+        <View
+            android:id="@+id/greenStripe"
+            android:layout_width="0dp"
+            android:layout_height="10dp"
+            android:background="#14D337"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <View
+            android:id="@+id/yellowStripe"
+            android:layout_width="0dp"
+            android:layout_height="3dp"
+            android:background="#FFEA08"
+            android:layout_marginBottom="10dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Tabs -->
     <com.google.android.material.tabs.TabLayout
