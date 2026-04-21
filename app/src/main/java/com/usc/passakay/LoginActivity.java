@@ -140,7 +140,8 @@ public class LoginActivity extends BaseActivity {
                                     intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
                                     break;
                                 default:
-                                    intent = new Intent(LoginActivity.this, MainActivity.class);
+                                    // Redirect passengers to PassengerHomeActivity instead of MainActivity
+                                    intent = new Intent(LoginActivity.this, PassengerHomeActivity.class);
                                     break;
                             }
                             intent.putExtra("userId", uid);
