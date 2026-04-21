@@ -6,7 +6,9 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
- import android.widget.LinearLayout;
+import android.widget.Button;
+import android.content.Intent;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -81,6 +83,23 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             if (expandedPosition != -1) notifyItemChanged(expandedPosition);
         });
 
+        // Status button logic
+        if (shuttle.isStandby()) {
+            holder.btnStatus.setText("Standby");
+            holder.btnStatus.setBackgroundResource(R.drawable.rounded_green_btn);
+            holder.btnStatus.setOnClickListener(v -> {
+                Intent intent = new Intent(context, ShuttleStopActivity.class);
+                intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME,   shuttle.getBusName());
+                intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LAT, shuttle.getDriverLat());
+                intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LNG, shuttle.getDriverLng());
+                context.startActivity(intent);
+            });
+        } else {
+            holder.btnStatus.setText("Deployed");
+            holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
+            holder.btnStatus.setOnClickListener(null);
+        }
+
         // Initialize and bind map if expanded
         if (isExpanded) {
             holder.bindMap(shuttle);
@@ -124,6 +143,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
     static class ShuttleViewHolder extends RecyclerView.ViewHolder implements OnMapReadyCallback {
         TextView tvBusName, tvDriverName, tvPlateNumber;
+        Button btnStatus;
         // TextView tvEta; // removed — etaBadge no longer in item_shuttle_2.xml
         // LinearLayout layoutStops, etaBadge;
         CardView cardShuttle, cardMap;
@@ -136,6 +156,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             tvBusName    = itemView.findViewById(R.id.tvBusName);
             tvDriverName = itemView.findViewById(R.id.tvDriverName);
             tvPlateNumber = itemView.findViewById(R.id.tvPlateNumber);
+            btnStatus     = itemView.findViewById(R.id.btnStatus);
             // tvEta        = itemView.findViewById(R.id.tvEta);
             // layoutStops  = itemView.findViewById(R.id.layoutStops);
             // etaBadge     = itemView.findViewById(R.id.etaBadge);
