@@ -87,6 +87,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         if (shuttle.isStandby()) {
             holder.btnStatus.setText("Standby");
             holder.btnStatus.setBackgroundResource(R.drawable.rounded_green_btn);
+            holder.btnStatus.setBackgroundTintList(null);
             holder.btnStatus.setOnClickListener(v -> {
                 Intent intent = new Intent(context, ShuttleStopActivity.class);
                 intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME,   shuttle.getBusName());
@@ -97,6 +98,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         } else {
             holder.btnStatus.setText("Deployed");
             holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
+            holder.btnStatus.setBackgroundTintList(null);
             holder.btnStatus.setOnClickListener(null);
         }
 

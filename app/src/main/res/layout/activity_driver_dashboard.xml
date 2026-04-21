@@ -55,7 +55,6 @@
         android:background="#FFFFFF"
         app:menu="@menu/menu"
         app:labelVisibilityMode="labeled"
-        app:itemIconTint="#1A1A1A"
         app:itemIconSize="25dp"
         app:itemTextColor="#1A1A1A"
         app:layout_constraintBottom_toBottomOf="parent"

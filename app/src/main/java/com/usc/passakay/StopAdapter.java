@@ -44,9 +44,11 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
         if (stop.isHasWaiting()) {
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_yellow_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#000000"));
+            holder.btnPickUp.setBackgroundTintList(null);
         } else {
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_gray_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#888888"));
+            holder.btnPickUp.setBackgroundTintList(null);
         }
 
         holder.btnPickUp.setOnClickListener(v -> {
