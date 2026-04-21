@@ -28,7 +28,7 @@ public class SplashActivity extends AppCompatActivity {
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             startActivity(new Intent(SplashActivity.this, LoginActivity.class));
             finish();
-        }, 3000); // Slightly longer delay to allow seeding to start
+        }, 3000);
     }
 
     private void animateDots(View dot1, View dot2, View dot3) {
