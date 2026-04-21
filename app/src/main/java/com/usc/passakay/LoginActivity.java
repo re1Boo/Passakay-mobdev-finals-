@@ -134,7 +134,7 @@ public class LoginActivity extends BaseActivity {
                             Intent intent;
                             switch (user.getRole()) {
                                 case "driver":
-                                    intent = new Intent(LoginActivity.this, DriverHomeActivity.class);
+                                    intent = new Intent(LoginActivity.this, DriverDashboardActivity.class);
                                     break;
                                 case "admin":
                                     intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
