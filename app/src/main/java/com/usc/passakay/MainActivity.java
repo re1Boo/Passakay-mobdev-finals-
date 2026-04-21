@@ -2,15 +2,10 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -23,12 +18,12 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends BaseActivity implements OnMapReadyCallback {
+public class MainActivity extends BaseActivity {
 
-    private GoogleMap mMap;
+    private RecyclerView recyclerShuttles;
+    private ShuttleAdapter shuttleAdapter;
+    private List<ShuttleItem> shuttleList = new ArrayList<>();
     private DatabaseReference db;
-    private BottomNavigationView bottomNav;
-    private List<ShuttleStop> shuttleStops = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,28 +41,71 @@ public class MainActivity extends BaseActivity implements OnMapReadyCallback {
 
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
-        // Initialize bottom nav
-        bottomNav = findViewById(R.id.bottom_nav);
-        setupBottomNav();
+        // Setup RecyclerView
+        recyclerShuttles = findViewById(R.id.recyclerShuttles);
+        recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
 
-        // Initialize map
-        SupportMapFragment mapFragment = (SupportMapFragment)
-                getSupportFragmentManager().findFragmentById(R.id.map);
-        if (mapFragment != null) {
-            mapFragment.getMapAsync(this);
-        }
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList);
+        recyclerShuttles.setAdapter(shuttleAdapter);
+
+        // Load shuttles
+        loadShuttles();
+
+        // Setup bottom nav
+        setupBottomNav();
+    }
+
+    private void loadShuttles() {
+        db.child("shuttles").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                shuttleList.clear();
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    Shuttle shuttle = child.getValue(Shuttle.class);
+                    if (shuttle != null) {
+                        // Create ShuttleItem with sample ETA and location
+                        ShuttleItem item = new ShuttleItem(
+                            String.valueOf(shuttle.getShuttleId()),
+                            "Bus " + shuttle.getShuttleId(),
+                            "John Doe",           // Placeholder
+                            shuttle.getPlateNumber(),
+                            (int)(Math.random() * 15) + 1, // Placeholder
+                            true,                 // Placeholder
+                            10.3535,              // Placeholder
+                            123.9109
+                        );
+                        shuttleList.add(item);
+                    }
+                }
+
+                // Add unavailable shuttle example
+                ShuttleItem unavailable = new ShuttleItem(
+                    "unavailable",
+                    "Bus " + (shuttleList.size() + 1),
+                    "Unavailable",
+                    "DEF 9012",
+                    0,
+                    false,
+                    0, 0
+                );
+                shuttleList.add(unavailable);
+
+                shuttleAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {}
+        });
     }
 
     private void setupBottomNav() {
-        if (bottomNav == null) return;
-        bottomNav.setVisibility(View.VISIBLE);
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+        bottomNav.setSelectedItemId(R.id.nav_home);
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                // already on home
                 return true;
             } else if (id == R.id.nav_history) {
-                // TODO: go to history
                 return true;
             } else if (id == R.id.nav_profile) {
                 startActivity(new Intent(this, ProfileActivity.class));
@@ -75,51 +113,5 @@ public class MainActivity extends BaseActivity implements OnMapReadyCallback {
             }
             return false;
         });
-    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-
-        // USC Cebu coordinates
-        LatLng usc = new LatLng(10.3535, 123.9109);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(usc, 17));
-
-        // Map settings
-        mMap.getUiSettings().setZoomControlsEnabled(true);
-        mMap.getUiSettings().setMyLocationButtonEnabled(true);
-
-        // Load shuttle stops after map is ready
-        loadShuttleStops();
-    }
-
-    private void loadShuttleStops() {
-        db.child("shuttleStops")
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot snapshot) {
-                    shuttleStops.clear();
-                    for (DataSnapshot child : snapshot.getChildren()) {
-                        ShuttleStop stop = child.getValue(ShuttleStop.class);
-                        if (stop != null) {
-                            shuttleStops.add(stop);
-                            addStopMarker(stop);
-                        }
-                    }
-                }
-
-                @Override
-                public void onCancelled(DatabaseError error) {}
-            });
-    }
-
-    private void addStopMarker(ShuttleStop stop) {
-        if (mMap == null) return;
-
-        LatLng position = new LatLng(stop.getLatitude(), stop.getLongitude());
-        mMap.addMarker(new MarkerOptions()
-                .position(position)
-                .title(stop.getStopName())
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
     }
 }
