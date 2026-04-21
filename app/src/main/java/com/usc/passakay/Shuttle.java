@@ -2,6 +2,7 @@ package com.usc.passakay;
 
 public class Shuttle {
     private int shuttleId;
+    private int capacity;
     private String plateNumber;
 
     public Shuttle() {}
@@ -16,4 +17,8 @@ public class Shuttle {
 
     public String getPlateNumber() { return plateNumber; }
     public void setPlateNumber(String plateNumber) { this.plateNumber = plateNumber; }
+
+    public int getCapacity() { return capacity; }
+
+    public void setCapacity(int capacity){ this.capacity = capacity; }
 }
