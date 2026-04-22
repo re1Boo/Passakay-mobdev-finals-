@@ -22,10 +22,11 @@
         <LinearLayout
             android:id="@+id/layoutSelection"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="vertical"
             android:padding="20dp"
-            app:layout_constraintTop_toBottomOf="@id/header">
+            app:layout_constraintTop_toBottomOf="@id/header"
+            app:layout_constraintBottom_toTopOf="@id/bottomNavigation">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -41,25 +42,36 @@
                 android:text="Select a shuttle to begin tracking"
                 android:textSize="14sp"
                 android:textColor="#666666"
-                android:layout_marginBottom="20dp"/>
+                android:layout_marginBottom="10dp"/>
 
+            <!-- Spinner and Button for DriverHomeActivity compatibility -->
             <Spinner
                 android:id="@+id/spinnerShuttles"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:background="@drawable/rounded_input_bg"
-                android:padding="10dp"/>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@android:drawable/btn_dropdown"
+                android:padding="8dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnStartTrip"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginTop="20dp"
+                android:layout_height="55dp"
+                android:layout_marginTop="15dp"
                 android:text="START TRIP"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:cornerRadius="12dp"
-                android:backgroundTint="#14D337"/>
+                android:backgroundTint="#4CAF50"
+                android:textColor="#FFFFFF"
+                app:cornerRadius="10dp"/>
+
+            <!-- Replaced Spinner with RecyclerView to follow previous UI (cards) -->
+            <!-- Kept with visibility="gone" to satisfy both potential use cases -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerShuttles"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingBottom="20dp"
+                android:visibility="gone"/>
 
         </LinearLayout>
 
@@ -115,9 +127,10 @@
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNavigation"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:background="#ffffff"
             app:menu="@menu/menu"
+            app:labelVisibilityMode="labeled"
             app:layout_constraintBottom_toBottomOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,13 +1,19 @@
 package com.usc.passakay;
 
+import com.google.firebase.database.IgnoreExtraProperties;
+
+@IgnoreExtraProperties
 public class Shuttle {
     private int shuttleId;
-    private int capacity;
+    private int capacity = 30;
     private String plateNumber;
-    private String currentDriverId;
-    private String driverName;
-    private String status;
+    private String status = "Standby";
+    private String driverName = "No driver";
+    private String driverId = "";
+    
+    // Fields for Activity compatibility
     private boolean active;
+    private String currentDriverId;
     private double currentLat;
     private double currentLng;
     private int currentPassengers;
@@ -18,9 +24,11 @@ public class Shuttle {
     public Shuttle(int shuttleId, String plateNumber) {
         this.shuttleId = shuttleId;
         this.plateNumber = plateNumber;
+        this.status = "Standby";
+        this.driverName = "No driver";
+        this.driverId = "";
         this.active = false;
         this.capacity = 30;
-        this.status = "Unavailable";
     }
 
     public int getShuttleId() { return shuttleId; }
@@ -32,17 +40,24 @@ public class Shuttle {
     public int getCapacity() { return capacity; }
     public void setCapacity(int capacity){ this.capacity = capacity; }
 
-    public String getCurrentDriverId() { return currentDriverId; }
-    public void setCurrentDriverId(String currentDriverId) { this.currentDriverId = currentDriverId; }
+    public String getStatus() { 
+        return (status == null || status.isEmpty()) ? "Standby" : status; 
+    }
+    public void setStatus(String status) { this.status = status; }
 
-    public String getDriverName() { return driverName; }
+    public String getDriverName() { 
+        return (driverName == null || driverName.isEmpty()) ? "No driver" : driverName; 
+    }
     public void setDriverName(String driverName) { this.driverName = driverName; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getDriverId() { return driverId; }
+    public void setDriverId(String driverId) { this.driverId = driverId; }
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+
+    public String getCurrentDriverId() { return currentDriverId; }
+    public void setCurrentDriverId(String currentDriverId) { this.currentDriverId = currentDriverId; }
 
     public double getCurrentLat() { return currentLat; }
     public void setCurrentLat(double currentLat) { this.currentLat = currentLat; }

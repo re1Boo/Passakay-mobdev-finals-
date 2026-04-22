@@ -2,12 +2,14 @@ package com.usc.passakay;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -24,34 +26,33 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.material.button.MaterialButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.List;
 
 public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleViewHolder> {
 
-    public interface OnShuttleClickListener {
-        void onShuttleClick(ShuttleItem shuttle);
-    }
-
     private final Context context;
     private final List<ShuttleItem> shuttleList;
-    private OnShuttleClickListener listener;
     private int expandedPosition = -1;
+    private DatabaseReference db;
 
     public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList) {
         this.context     = context;
         this.shuttleList = shuttleList;
-    }
-
-    public void setOnShuttleClickListener(OnShuttleClickListener listener) {
-        this.listener = listener;
+        this.db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
     }
 
     @NonNull
     @Override
     public ShuttleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_shuttle, parent, false);
+        // Use item_shuttle_2 for driver side consistency
+        View view = LayoutInflater.from(context).inflate(R.layout.item_shuttle_2, parent, false);
         return new ShuttleViewHolder(view);
     }
 
@@ -64,43 +65,35 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         holder.tvBusName.setText(shuttle.getBusName());
         holder.tvDriverName.setText("Driver: " + shuttle.getDriverName());
         holder.tvPlateNumber.setText("Plate: " + shuttle.getPlateNumber());
-        holder.tvEta.setText(String.valueOf(shuttle.getEta()));
-        
-        // New fields
-        holder.tvCapacity.setText("Capacity: " + shuttle.getCurrentPassengers() + "/" + shuttle.getCapacity());
-        holder.tvLastUpdated.setText("Updated: " + shuttle.getLastUpdated());
 
         // Styling based on availability
         if (!shuttle.isAvailable()) {
-            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#F5F5F5"));
+            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
             holder.tvBusName.setTextColor(Color.parseColor("#AAAAAA"));
-            holder.etaBadge.setBackgroundResource(R.drawable.rounded_gray_badge);
-            holder.tvEta.setText("0");
-            holder.layoutDetails.setVisibility(View.GONE);
         } else {
             holder.cardShuttle.setCardBackgroundColor(Color.WHITE);
             holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
-            holder.etaBadge.setBackgroundResource(R.drawable.rounded_yellow_badge);
-            holder.layoutDetails.setVisibility(View.VISIBLE);
         }
 
-        // Driver specific: Show Deploy Button if bus is in Standby and we are in Driver mode
-        if (listener != null && shuttle.isStandby()) {
-            holder.layoutDetails.setVisibility(View.VISIBLE);
-            holder.btnDeploy.setVisibility(View.VISIBLE);
-            holder.btnDeploy.setOnClickListener(v -> listener.onShuttleClick(shuttle));
+        // Status Button Logic for Driver side (item_shuttle_2)
+        if (shuttle.isStandby()) {
+            holder.btnStatus.setText("Standby");
+            holder.btnStatus.setBackgroundResource(R.drawable.rounded_green_btn);
+            holder.btnStatus.setBackgroundTintList(null);
+            holder.btnStatus.setOnClickListener(v -> deployShuttle(shuttle));
         } else {
-            holder.btnDeploy.setVisibility(View.GONE);
+            holder.btnStatus.setText("Deployed");
+            holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
+            holder.btnStatus.setBackgroundTintList(null);
+            holder.btnStatus.setOnClickListener(null); // Already deployed
         }
-
-        // Draw stop indicators
-        drawStopIndicators(holder.layoutStops, shuttle.isAvailable());
 
         // Show/hide map section
         holder.cardMap.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
 
         // Click logic: Expansion
         holder.cardShuttle.setOnClickListener(v -> {
+            if (!shuttle.isAvailable()) return;
             int previousExpanded = expandedPosition;
             expandedPosition = isExpanded ? -1 : holder.getAdapterPosition();
 
@@ -114,42 +107,34 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         }
     }
 
-    private void drawStopIndicators(LinearLayout layout, boolean isAvailable) {
-        layout.removeAllViews();
-        int stopCount = 7;
-        int youIndex = 4; // Simulated "You" position
-        int dotColor  = isAvailable ? Color.parseColor("#FFEA08") : Color.parseColor("#DDDDDD");
-        int lineColor = isAvailable ? Color.parseColor("#EEEEEE") : Color.parseColor("#EEEEEE");
-        int youColor  = Color.parseColor("#FF5722");
+    private void deployShuttle(ShuttleItem shuttleItem) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
 
-        for (int i = 0; i < stopCount; i++) {
-            // Dot
-            View dot = new View(context);
-            int size = (i == youIndex) ? 14 : 10;
-            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(size, size);
-            dotParams.gravity = android.view.Gravity.CENTER_VERTICAL;
-            dot.setLayoutParams(dotParams);
-            
-            GradientDrawable circle = new GradientDrawable();
-            circle.setShape(GradientDrawable.OVAL);
-            circle.setColor(i == youIndex ? youColor : dotColor);
-            if (i != youIndex && isAvailable) {
-                circle.setStroke(1, Color.parseColor("#FFD600"));
-            }
-            dot.setBackground(circle);
-            layout.addView(dot);
+        db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user != null) {
+                    String driverName = user.getFirstName() + " " + user.getLastName();
+                    
+                    DatabaseReference shuttleRef = db.child("shuttles").child(shuttleItem.getShuttleId());
+                    shuttleRef.child("status").setValue("Deployed");
+                    shuttleRef.child("driverName").setValue(driverName);
+                    shuttleRef.child("driverId").setValue(uid);
 
-            // Line
-            if (i < stopCount - 1) {
-                View line = new View(context);
-                LinearLayout.LayoutParams lineParams =
-                        new LinearLayout.LayoutParams(0, 4, 1f);
-                lineParams.gravity = android.view.Gravity.CENTER_VERTICAL;
-                line.setLayoutParams(lineParams);
-                line.setBackgroundColor(lineColor);
-                layout.addView(line);
+                    Intent intent = new Intent(context, ShuttleStopActivity.class);
+                    intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME,   shuttleItem.getBusName());
+                    intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LAT, shuttleItem.getDriverLat());
+                    intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LNG, shuttleItem.getDriverLng());
+                    intent.putExtra("shuttleId", shuttleItem.getShuttleId());
+                    context.startActivity(intent);
+                }
             }
-        }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
 
     @Override
@@ -158,9 +143,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     }
 
     static class ShuttleViewHolder extends RecyclerView.ViewHolder implements OnMapReadyCallback {
-        TextView tvBusName, tvDriverName, tvPlateNumber, tvEta, tvCapacity, tvLastUpdated;
-        LinearLayout layoutStops, etaBadge, layoutDetails;
-        MaterialButton btnDeploy;
+        TextView tvBusName, tvDriverName, tvPlateNumber;
+        Button btnStatus;
         CardView cardShuttle, cardMap;
         MapView mapView;
         GoogleMap googleMap;
@@ -171,13 +155,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             tvBusName     = itemView.findViewById(R.id.tvBusName);
             tvDriverName  = itemView.findViewById(R.id.tvDriverName);
             tvPlateNumber = itemView.findViewById(R.id.tvPlateNumber);
-            tvEta         = itemView.findViewById(R.id.tvEta);
-            tvCapacity    = itemView.findViewById(R.id.tvCapacity);
-            tvLastUpdated = itemView.findViewById(R.id.tvLastUpdated);
-            layoutStops   = itemView.findViewById(R.id.layoutStops);
-            etaBadge      = itemView.findViewById(R.id.etaBadge);
-            layoutDetails = itemView.findViewById(R.id.layoutDetails);
-            btnDeploy     = itemView.findViewById(R.id.btnDeploy);
+            btnStatus     = itemView.findViewById(R.id.btnStatus);
             cardShuttle   = itemView.findViewById(R.id.cardShuttle);
             cardMap       = itemView.findViewById(R.id.cardMap);
             mapView       = itemView.findViewById(R.id.mapView);
@@ -207,7 +185,6 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             LatLng shuttleLocation = new LatLng(currentShuttle.getDriverLat(), currentShuttle.getDriverLng());
             googleMap.clear();
             
-            // Enable Blue Dot for User Location
             if (ActivityCompat.checkSelfPermission(itemView.getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 googleMap.setMyLocationEnabled(true);
             }
