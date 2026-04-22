@@ -7,6 +7,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -24,6 +26,7 @@ public class ProfileActivity extends BaseActivity {
     private Button btnChangePassword, btnLogout;
     private DatabaseReference db;
     private boolean isPasswordVisible = false;
+    private String userRole = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +83,7 @@ public class ProfileActivity extends BaseActivity {
                 public void onDataChange(DataSnapshot snapshot) {
                     User user = snapshot.getValue(User.class);
                     if (user != null) {
+                        userRole = user.getRole();
                         tvFullName.setText(user.getFirstName() + " " + user.getLastName());
                         tvRole.setText(capitalize(user.getRole()));
                         tvStudentId.setText("ID Number: " + user.getStudentId());
@@ -166,11 +170,18 @@ public class ProfileActivity extends BaseActivity {
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                startActivity(new Intent(this, MainActivity.class));
+                Intent intent;
+                if ("driver".equals(userRole)) {
+                    intent = new Intent(this, DriverDashboardActivity.class);
+                } else if ("admin".equals(userRole)) {
+                    intent = new Intent(this, AdminDashboardActivity.class);
+                } else {
+                    intent = new Intent(this, PassengerHomeActivity.class);
+                }
+                startActivity(intent);
                 finish();
                 return true;
             } else if (id == R.id.nav_history) {
-                // TODO: go to history
                 return true;
             } else if (id == R.id.nav_profile) {
                 return true;

@@ -35,6 +35,8 @@
         <activity android:name=".PassengerHomeActivity" />
         <activity android:name=".AdminLoginActivity" />
         <activity android:name=".AdminDashboardActivity" />
+        <activity android:name=".DriverDashboardActivity" />
+        <activity android:name=".ShuttleStopActivity" />
         <activity android:name=".ProfileActivity" />
 
         <meta-data
