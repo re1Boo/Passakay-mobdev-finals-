@@ -9,9 +9,6 @@ public class ShuttleItem {
     private boolean isAvailable;
     private double driverLat;
     private double driverLng;
-    private int capacity;
-    private int currentPassengers;
-    private String lastUpdated;
 
     public ShuttleItem() {}
 
@@ -26,12 +23,8 @@ public class ShuttleItem {
         this.isAvailable = isAvailable;
         this.driverLat   = driverLat;
         this.driverLng   = driverLng;
-        this.capacity    = 30; // Default capacity
-        this.currentPassengers = 0;
-        this.lastUpdated = "Just now";
     }
 
-    // Getters and Setters
     public String getShuttleId() { return shuttleId; }
     public String getBusName() { return busName; }
     public String getDriverName() { return driverName; }
@@ -40,9 +33,6 @@ public class ShuttleItem {
     public boolean isAvailable() { return isAvailable; }
     public double getDriverLat() { return driverLat; }
     public double getDriverLng() { return driverLng; }
-    public int getCapacity() { return capacity; }
-    public int getCurrentPassengers() { return currentPassengers; }
-    public String getLastUpdated() { return lastUpdated; }
 
     public void setShuttleId(String shuttleId) { this.shuttleId = shuttleId; }
     public void setBusName(String busName) { this.busName = busName; }
@@ -52,7 +42,4 @@ public class ShuttleItem {
     public void setAvailable(boolean available) { isAvailable = available; }
     public void setDriverLat(double driverLat) { this.driverLat = driverLat; }
     public void setDriverLng(double driverLng) { this.driverLng = driverLng; }
-    public void setCapacity(int capacity) { this.capacity = capacity; }
-    public void setCurrentPassengers(int currentPassengers) { this.currentPassengers = currentPassengers; }
-    public void setLastUpdated(String lastUpdated) { this.lastUpdated = lastUpdated; }
 }
