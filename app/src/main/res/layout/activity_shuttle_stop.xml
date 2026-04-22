@@ -1,45 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:fitsSystemWindows="true">
+    android:background="#FFFFFF">
 
-    <!-- Header -->
+    <!-- Header: Consistent with other pages -->
     <include
-        android:id="@+id/header"
+        android:id="@+id/headerInclude"
         layout="@layout/header"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="75dp"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Bottom Sheet behavior: map + stops list -->
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Main Content Area with Bottom Sheet support -->
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/coordinatorLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/headerInclude"
+        app:layout_constraintBottom_toTopOf="@id/bottom_nav">
 
-        <!-- Full-screen Google Map (behind the bottom sheet) -->
+        <!-- Map View as the background layer -->
         <com.google.android.gms.maps.MapView
             android:id="@+id/mapViewStops"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-        <!-- Bottom Sheet -->
+        <!-- Draggable Bottom Sheet -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/bottomSheet"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:background="@drawable/rounded_top_white"
             android:elevation="8dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            app:behavior_hideable="false"
+            app:behavior_peekHeight="200dp"
+            app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -54,20 +52,45 @@
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="10dp"
                     android:layout_marginBottom="12dp"
-                    android:background="#CCCCCC"
-                    android:backgroundTint="#CCCCCC"/>
+                    android:background="#CCCCCC"/>
 
-                <!-- "Shuttle Stops" title -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Shuttle Stops"
-                    android:textSize="26sp"
-                    android:textStyle="bold"
-                    android:textColor="#000000"
-                    android:fontFamily="@font/archivo_black"
                     android:layout_marginStart="20dp"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginBottom="12dp">
+
+                    <!-- "Shuttle Stops" title -->
+                    <TextView
+                        android:id="@+id/tvStopsTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shuttle Stops"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:textColor="#000000"
+                        android:fontFamily="@font/archivo_black"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"/>
+
+                    <!-- Stop Driving Button -->
+                    <Button
+                        android:id="@+id/btnStopDriving"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Stop Driving"
+                        android:textSize="12sp"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#FF5252"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"/>
+
+                </RelativeLayout>
 
                 <!-- Stop items list -->
                 <androidx.recyclerview.widget.RecyclerView
@@ -82,19 +105,20 @@
 
         </androidx.core.widget.NestedScrollView>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
-    <!-- Bottom Navigation -->
+    <!-- Bottom Navigation: Anchored to the very bottom and always visible -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
+        android:layout_height="56dp"
         android:background="#FFFFFF"
+        app:elevation="16dp"
         app:menu="@menu/menu"
         app:labelVisibilityMode="labeled"
         app:itemIconTint="#1A1A1A"
         app:itemIconSize="25dp"
-        app:itemTextColor="#1A1A1A"/>
+        app:itemTextColor="#1A1A1A"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

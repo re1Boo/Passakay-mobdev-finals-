@@ -2,7 +2,10 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Button;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -15,71 +18,102 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Shows the map + list of shuttle stops for a given bus.
- * Launched when the driver taps the green "Standby" button on the dashboard.
- *
- * Expected Intent extras:
- *   - EXTRA_BUS_NAME   (String)  – e.g. "Bus 2"
- *   - EXTRA_DRIVER_LAT (double)  – shuttle's current latitude  (optional, falls back to USC)
- *   - EXTRA_DRIVER_LNG (double)  – shuttle's current longitude (optional, falls back to USC)
- */
 public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallback {
 
     public static final String EXTRA_BUS_NAME   = "extra_bus_name";
     public static final String EXTRA_DRIVER_LAT = "extra_driver_lat";
     public static final String EXTRA_DRIVER_LNG = "extra_driver_lng";
 
-    // USC campus center (fallback)
-    private static final double DEFAULT_LAT = 10.3157;
-    private static final double DEFAULT_LNG = 123.8854;
+    private static final double DEFAULT_LAT = 10.3541;
+    private static final double DEFAULT_LNG = 123.9115;
 
     private MapView mapView;
     private GoogleMap googleMap;
     private double driverLat, driverLng;
     private String busName;
+    private String shuttleId;
 
     private RecyclerView recyclerStops;
     private StopAdapter stopAdapter;
     private final List<StopItem> stopList = new ArrayList<>();
+    private DatabaseReference db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_shuttle_stop);
 
-        // Read intent extras
+        db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+
         busName   = getIntent().getStringExtra(EXTRA_BUS_NAME);
         driverLat = getIntent().getDoubleExtra(EXTRA_DRIVER_LAT, DEFAULT_LAT);
         driverLng = getIntent().getDoubleExtra(EXTRA_DRIVER_LNG, DEFAULT_LNG);
+        shuttleId = getIntent().getStringExtra("shuttleId");
 
-        // Map
         mapView = findViewById(R.id.mapViewStops);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        // Stops RecyclerView
         recyclerStops = findViewById(R.id.recyclerStops);
         recyclerStops.setLayoutManager(new LinearLayoutManager(this));
         stopAdapter = new StopAdapter(this, stopList);
         recyclerStops.setAdapter(stopAdapter);
 
-        loadFakeStops();
+        Button btnStopDriving = findViewById(R.id.btnStopDriving);
+        btnStopDriving.setOnClickListener(v -> stopDriving());
+
+        loadStopsFromFirebase();
         setupBottomNav();
     }
 
-    // TODO: Replace with real Firebase / backend data
-    private void loadFakeStops() {
-        stopList.add(new StopItem("Portal Terminal",  4, 324));
-        stopList.add(new StopItem("Bunzel Building",  0, 324));
-        stopList.add(new StopItem("SAFAD Building",   4, 324));
-        stopList.add(new StopItem("SAS Building",     4, 324));
-        stopList.add(new StopItem("SHCP Building",    0, 324));
-        stopAdapter.notifyDataSetChanged();
+    private void stopDriving() {
+        if (shuttleId == null) return;
+        
+        DatabaseReference shuttleRef = db.child("shuttles").child(shuttleId);
+        shuttleRef.child("status").setValue("Standby");
+        shuttleRef.child("driverId").setValue("");
+        shuttleRef.child("driverName").setValue("No driver");
+
+        Intent intent = new Intent(this, DriverDashboardActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    private void loadStopsFromFirebase() {
+        db.child("shuttleStops").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                stopList.clear();
+                for (DataSnapshot stopSnapshot : snapshot.getChildren()) {
+                    ShuttleStop stop = stopSnapshot.getValue(ShuttleStop.class);
+                    if (stop != null) {
+                        int waiting = 0; // Placeholder
+                        stopList.add(new StopItem(
+                                stop.getStopName(),
+                                waiting,
+                                324 // Placeholder distance
+                        ));
+                    }
+                }
+                stopAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(ShuttleStopActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -101,10 +135,10 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                startActivity(new Intent(this, DriverDashboardActivity.class));
+                // If driving, staying in this activity is preferred when "Home" is tapped,
+                // but if they are already here, we do nothing or re-init.
                 return true;
             } else if (id == R.id.nav_history) {
-                // TODO: navigate to history
                 return true;
             } else if (id == R.id.nav_profile) {
                 startActivity(new Intent(this, ProfileActivity.class));
@@ -113,8 +147,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
             return false;
         });
     }
-
-    // ── MapView lifecycle forwarding ──────────────────────────────────────────
 
     @Override protected void onResume()  { super.onResume();  mapView.onResume(); }
     @Override protected void onPause()   { super.onPause();   mapView.onPause();  }

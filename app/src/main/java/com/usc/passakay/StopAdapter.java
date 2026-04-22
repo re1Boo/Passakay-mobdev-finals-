@@ -10,7 +10,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
@@ -41,21 +40,25 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
         holder.tvDistance.setText("Distance: " + stop.getDistanceMeters() + "m");
 
         // Yellow button = passengers waiting; gray = no passengers
-        if (stop.isHasWaiting()) {
+        if (stop.getWaitingCount() > 0) {
+            holder.btnPickUp.setEnabled(true);
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_yellow_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#000000"));
             holder.btnPickUp.setBackgroundTintList(null);
+            holder.btnPickUp.setAlpha(1.0f);
         } else {
+            holder.btnPickUp.setEnabled(false);
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_gray_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#888888"));
             holder.btnPickUp.setBackgroundTintList(null);
+            holder.btnPickUp.setAlpha(0.5f); // Make it look grayed out
         }
 
         holder.btnPickUp.setOnClickListener(v -> {
-            // TODO: implement pick-up action (update Firebase, notify passengers, etc.)
             Toast.makeText(context,
                     "Picking up at " + stop.getStopName(),
                     Toast.LENGTH_SHORT).show();
+            // Real implementation would update Firebase here
         });
     }
 
