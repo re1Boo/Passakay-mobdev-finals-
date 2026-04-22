@@ -7,6 +7,7 @@
     android:background="#FFFFFF"
     android:clipChildren="false">
 
+    <!-- Header -->
     <include
         android:id="@+id/header"
         layout="@layout/header"
@@ -16,108 +17,133 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <View
-        android:id="@+id/cardLogin"
-        android:layout_width="226dp"
-        android:layout_height="303dp"
-        android:background="@drawable/rounded_card_bg"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="88dp"
-        android:layout_marginTop="228dp" />
-
+    <!-- Mascot Image -->
     <ImageView
         android:id="@+id/imgMascot"
         android:layout_width="55dp"
         android:layout_height="73dp"
         android:src="@drawable/login_passakay_logo"
         android:scaleType="fitXY"
-        android:contentDescription="102 (1) 2"
+        android:contentDescription="Passakay logo"
+        app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="173dp"
-        android:layout_marginTop="177dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="32dp" />
 
+    <!-- White Card -->
+    <View
+        android:id="@+id/cardLogin"
+        android:layout_width="354dp"
+        android:layout_height="363dp"
+        android:layout_marginTop="-20dp"
+        android:background="@drawable/rounded_card_bg"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/imgMascot" />
+
+    <!-- Welcome Image -->
     <ImageView
         android:id="@+id/tvWelcome"
         android:layout_width="116dp"
         android:layout_height="28dp"
         android:src="@drawable/welcome"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="149dp"
-        android:layout_marginTop="249dp" />
+        app:layout_constraintTop_toTopOf="@id/cardLogin"
+        app:layout_constraintStart_toStartOf="@id/cardLogin"
+        app:layout_constraintEnd_toEndOf="@id/cardLogin"
+        android:layout_marginTop="36dp" />
 
+    <!-- Student ID Input -->
     <EditText
         android:id="@+id/etStudentId"
-        android:layout_width="171dp"
-        android:layout_height="28dp"
-        android:hint="Enter Student ID"
-        android:textColorHint="#D0D0D0"
-        android:textSize="12sp"
-        android:fontFamily="@font/kanit"
-        android:textStyle="bold"
+        android:layout_width="300dp"
+        android:layout_height="44dp"
         android:background="@drawable/rounded_input_bg"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
+        android:fontFamily="@font/kanit"
+        android:hint="Enter Student ID"
         android:inputType="text"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="115dp"
-        android:layout_marginTop="310dp" />
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textColorHint="#D0D0D0"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/tvWelcome"
+        app:layout_constraintStart_toStartOf="@id/cardLogin"
+        app:layout_constraintEnd_toEndOf="@id/cardLogin"
+        android:layout_marginTop="20dp" />
 
+    <!-- Password Input -->
     <EditText
         android:id="@+id/etPassword"
-        android:layout_width="171dp"
-        android:layout_height="28dp"
-        android:hint="Password"
-        android:textColorHint="#D0D0D0"
-        android:textSize="12sp"
-        android:fontFamily="@font/kanit"
-        android:textStyle="bold"
+        android:layout_width="300dp"
+        android:layout_height="44dp"
         android:background="@drawable/rounded_input_bg"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
+        android:fontFamily="@font/kanit"
+        android:hint="Password"
         android:inputType="textPassword"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="115dp"
-        android:layout_marginTop="359dp" />
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textColorHint="#D0D0D0"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/etStudentId"
+        app:layout_constraintStart_toStartOf="@id/cardLogin"
+        app:layout_constraintEnd_toEndOf="@id/cardLogin"
+        android:layout_marginTop="14dp" />
 
-    <!-- Updated Login Button -->
+    <!-- Login Button -->
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnLogin"
-        android:layout_width="115dp"
-        android:layout_height="28dp"
-        android:text="Login"
-        android:textColor="#000000"
-        android:textSize="15sp"
-        android:textStyle="bold"
-        android:fontFamily="@font/kanit"
+        android:layout_width="200dp"
+        android:layout_height="42dp"
         android:background="@drawable/rounded_green_btn"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="143dp"
-        android:layout_marginTop="407dp" />
+        android:fontFamily="@font/kanit"
+        android:text="Login"
+        android:textAllCaps="false"
+        android:textColor="#000000"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/etPassword"
+        app:layout_constraintStart_toStartOf="@id/cardLogin"
+        app:layout_constraintEnd_toEndOf="@id/cardLogin"
+        android:layout_marginTop="20dp" />
 
-    <!-- Subtle Create Account Text -->
+    <!-- "Don't have an account?" label -->
+
+    <!-- "Create one" as a proper tappable button -->
+    <<!-- "Don't have an account?" label -->
+    <TextView
+        android:id="@+id/tvNoAccount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:fontFamily="@font/kanit"
+        android:text="Don't have an account?"
+        android:textColor="#888888"
+        android:textSize="15sp"
+        app:layout_constraintStart_toStartOf="@id/cardLogin"
+        app:layout_constraintEnd_toEndOf="@id/cardLogin"
+        app:layout_constraintTop_toBottomOf="@id/btnLogin" />
+
+    <!-- "Create one" button below the label -->
     <TextView
         android:id="@+id/btnCreateAccount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Don't have an account? Create one"
-        android:textColor="#888888"
-        android:textSize="10sp"
-        android:fontFamily="@font/kanit"
-        android:textStyle="normal"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
+        android:layout_marginTop="4dp"
+        android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="445dp" />
+        android:fontFamily="@font/kanit"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:text="Create one"
+        android:textColor="#4CAF50"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="@id/cardLogin"
+        app:layout_constraintEnd_toEndOf="@id/cardLogin"
+        app:layout_constraintTop_toBottomOf="@id/tvNoAccount" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -50,18 +50,25 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         // Set bus info
         holder.tvBusName.setText(shuttle.getBusName());
         holder.tvDriverName.setText("Driver: " + shuttle.getDriverName());
-        holder.tvPlateNumber.setText("Plate Number: " + shuttle.getPlateNumber());
+        holder.tvPlateNumber.setText("Plate: " + shuttle.getPlateNumber());
         holder.tvEta.setText(String.valueOf(shuttle.getEta()));
+        
+        // New fields
+        holder.tvCapacity.setText("Capacity: " + shuttle.getCurrentPassengers() + "/" + shuttle.getCapacity());
+        holder.tvLastUpdated.setText("Updated: " + shuttle.getLastUpdated());
 
         // Unavailable shuttle styling
         if (!shuttle.isAvailable()) {
-            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
+            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#F5F5F5"));
             holder.tvBusName.setTextColor(Color.parseColor("#AAAAAA"));
             holder.etaBadge.setBackgroundResource(R.drawable.rounded_gray_badge);
+            holder.tvEta.setText("0");
+            holder.layoutDetails.setVisibility(View.GONE);
         } else {
             holder.cardShuttle.setCardBackgroundColor(Color.WHITE);
             holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
             holder.etaBadge.setBackgroundResource(R.drawable.rounded_yellow_badge);
+            holder.layoutDetails.setVisibility(View.VISIBLE);
         }
 
         // Draw stop indicators
@@ -89,22 +96,30 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
     private void drawStopIndicators(LinearLayout layout, boolean isAvailable) {
         layout.removeAllViews();
-        int stopCount = 6;
-        int dotColor  = isAvailable ? Color.parseColor("#FFEA08") : Color.parseColor("#AAAAAA");
-        int lineColor = isAvailable ? Color.parseColor("#FFEA08") : Color.parseColor("#AAAAAA");
+        int stopCount = 7;
+        int youIndex = 4; // Simulated "You" position
+        int dotColor  = isAvailable ? Color.parseColor("#FFEA08") : Color.parseColor("#DDDDDD");
+        int lineColor = isAvailable ? Color.parseColor("#EEEEEE") : Color.parseColor("#EEEEEE");
+        int youColor  = Color.parseColor("#FF5722");
 
         for (int i = 0; i < stopCount; i++) {
+            // Dot
             View dot = new View(context);
-            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(12, 12);
+            int size = (i == youIndex) ? 14 : 10;
+            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(size, size);
             dotParams.gravity = android.view.Gravity.CENTER_VERTICAL;
             dot.setLayoutParams(dotParams);
             
             GradientDrawable circle = new GradientDrawable();
             circle.setShape(GradientDrawable.OVAL);
-            circle.setColor(i == stopCount - 1 ? Color.parseColor("#FF5722") : dotColor);
+            circle.setColor(i == youIndex ? youColor : dotColor);
+            if (i != youIndex && isAvailable) {
+                circle.setStroke(1, Color.parseColor("#FFD600"));
+            }
             dot.setBackground(circle);
             layout.addView(dot);
 
+            // Line
             if (i < stopCount - 1) {
                 View line = new View(context);
                 LinearLayout.LayoutParams lineParams =
@@ -123,8 +138,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     }
 
     static class ShuttleViewHolder extends RecyclerView.ViewHolder implements OnMapReadyCallback {
-        TextView tvBusName, tvDriverName, tvPlateNumber, tvEta;
-        LinearLayout layoutStops, etaBadge;
+        TextView tvBusName, tvDriverName, tvPlateNumber, tvEta, tvCapacity, tvLastUpdated;
+        LinearLayout layoutStops, etaBadge, layoutDetails;
         CardView cardShuttle, cardMap;
         MapView mapView;
         GoogleMap googleMap;
@@ -132,15 +147,18 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
         ShuttleViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvBusName    = itemView.findViewById(R.id.tvBusName);
-            tvDriverName = itemView.findViewById(R.id.tvDriverName);
+            tvBusName     = itemView.findViewById(R.id.tvBusName);
+            tvDriverName  = itemView.findViewById(R.id.tvDriverName);
             tvPlateNumber = itemView.findViewById(R.id.tvPlateNumber);
-            tvEta        = itemView.findViewById(R.id.tvEta);
-            layoutStops  = itemView.findViewById(R.id.layoutStops);
-            etaBadge     = itemView.findViewById(R.id.etaBadge);
-            cardShuttle  = itemView.findViewById(R.id.cardShuttle);
-            cardMap      = itemView.findViewById(R.id.cardMap);
-            mapView      = itemView.findViewById(R.id.mapView);
+            tvEta         = itemView.findViewById(R.id.tvEta);
+            tvCapacity    = itemView.findViewById(R.id.tvCapacity);
+            tvLastUpdated = itemView.findViewById(R.id.tvLastUpdated);
+            layoutStops   = itemView.findViewById(R.id.layoutStops);
+            etaBadge      = itemView.findViewById(R.id.etaBadge);
+            layoutDetails = itemView.findViewById(R.id.layoutDetails);
+            cardShuttle   = itemView.findViewById(R.id.cardShuttle);
+            cardMap       = itemView.findViewById(R.id.cardMap);
+            mapView       = itemView.findViewById(R.id.mapView);
 
             if (mapView != null) {
                 mapView.onCreate(null);
@@ -151,6 +169,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         @Override
         public void onMapReady(GoogleMap googleMap) {
             this.googleMap = googleMap;
+            googleMap.getUiSettings().setAllGesturesEnabled(false); // Static feel
             MapsInitializer.initialize(itemView.getContext());
             updateMapContents();
         }
@@ -170,7 +189,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
                     .title(currentShuttle.getBusName())
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
 
-            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLocation, 16));
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLocation, 15));
         }
     }
 }
