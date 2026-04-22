@@ -47,6 +47,7 @@
         android:layout_width="116dp"
         android:layout_height="28dp"
         android:src="@drawable/welcome"
+        android:contentDescription="Welcome"
         app:layout_constraintTop_toTopOf="@id/cardLogin"
         app:layout_constraintStart_toStartOf="@id/cardLogin"
         app:layout_constraintEnd_toEndOf="@id/cardLogin"
@@ -66,6 +67,7 @@
         android:textColorHint="#D0D0D0"
         android:textSize="13sp"
         android:textStyle="bold"
+        android:importantForAutofill="no"
         app:layout_constraintTop_toBottomOf="@id/tvWelcome"
         app:layout_constraintStart_toStartOf="@id/cardLogin"
         app:layout_constraintEnd_toEndOf="@id/cardLogin"
@@ -85,6 +87,7 @@
         android:textColorHint="#D0D0D0"
         android:textSize="13sp"
         android:textStyle="bold"
+        android:importantForAutofill="no"
         app:layout_constraintTop_toBottomOf="@id/etStudentId"
         app:layout_constraintStart_toStartOf="@id/cardLogin"
         app:layout_constraintEnd_toEndOf="@id/cardLogin"
@@ -108,9 +111,6 @@
         android:layout_marginTop="20dp" />
 
     <!-- "Don't have an account?" label -->
-
-    <!-- "Create one" as a proper tappable button -->
-    <<!-- "Don't have an account?" label -->
     <TextView
         android:id="@+id/tvNoAccount"
         android:layout_width="wrap_content"
