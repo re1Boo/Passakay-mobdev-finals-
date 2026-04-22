@@ -2,6 +2,7 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -9,6 +10,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -25,6 +28,8 @@ public class PassengerHomeActivity extends BaseActivity {
     private ShuttleAdapter shuttleAdapter;
     private List<ShuttleItem> shuttleList = new ArrayList<>();
     private DatabaseReference db;
+    private MaterialButton btnWaitingStatus;
+    private boolean isWaiting = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +38,10 @@ public class PassengerHomeActivity extends BaseActivity {
 
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
+        // UI Elements
+        btnWaitingStatus = findViewById(R.id.btnWaitingStatus);
+        FloatingActionButton fabScanQR = findViewById(R.id.fabScanQR);
+
         // Setup RecyclerView
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
@@ -40,11 +49,33 @@ public class PassengerHomeActivity extends BaseActivity {
         shuttleAdapter = new ShuttleAdapter(this, shuttleList);
         recyclerShuttles.setAdapter(shuttleAdapter);
 
+        // Waiting Status Toggle
+        btnWaitingStatus.setOnClickListener(v -> toggleWaitingStatus());
+
+        // QR Scan FAB
+        fabScanQR.setOnClickListener(v -> {
+            Toast.makeText(this, "Opening QR Scanner...", Toast.LENGTH_SHORT).show();
+            // Implement QR Scanning Logic here
+        });
+
         // Load shuttles
         loadShuttles();
 
         // Setup bottom nav
         setupBottomNav();
+    }
+
+    private void toggleWaitingStatus() {
+        isWaiting = !isWaiting;
+        if (isWaiting) {
+            btnWaitingStatus.setText("WAITING");
+            btnWaitingStatus.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFF44336)); // Red
+            Toast.makeText(this, "Status: Waiting for shuttle", Toast.LENGTH_SHORT).show();
+        } else {
+            btnWaitingStatus.setText("NOT WAITING");
+            btnWaitingStatus.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF2E7D32)); // Green
+            Toast.makeText(this, "Status: Not waiting", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void loadShuttles() {
@@ -59,28 +90,31 @@ public class PassengerHomeActivity extends BaseActivity {
                         ShuttleItem item = new ShuttleItem(
                             String.valueOf(shuttle.getShuttleId()),
                             "Bus " + shuttle.getShuttleId(),
-                            "John Doe",           // Placeholder
+                            "Driver " + shuttle.getShuttleId(), 
                             shuttle.getPlateNumber(),
-                            (int)(Math.random() * 15) + 1, // Placeholder
-                            true,                 // Placeholder
-                            10.3535,              // Placeholder
+                            (int)(Math.random() * 10) + 1,
+                            true,
+                            10.3535,
                             123.9109
                         );
                         shuttleList.add(item);
                     }
                 }
 
-                // Add unavailable shuttle example
-                ShuttleItem unavailable = new ShuttleItem(
-                    "unavailable",
+                // Add an offline shuttle for visual variety
+                if (shuttleList.isEmpty()) {
+                     shuttleList.add(new ShuttleItem("1", "Bus 1", "Juan Dela Cruz", "GWX 123", 5, true, 10.3521, 123.9123));
+                }
+                
+                shuttleList.add(new ShuttleItem(
+                    "offline",
                     "Bus " + (shuttleList.size() + 1),
-                    "Unavailable",
-                    "DEF 9012",
+                    "No Driver Assigned",
+                    "---",
                     0,
                     false,
                     0, 0
-                );
-                shuttleList.add(unavailable);
+                ));
 
                 shuttleAdapter.notifyDataSetChanged();
             }
@@ -106,13 +140,5 @@ public class PassengerHomeActivity extends BaseActivity {
             }
             return false;
         });
-    }
-
-    private void logoutUser() {
-        FirebaseAuth.getInstance().signOut();
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
     }
 }

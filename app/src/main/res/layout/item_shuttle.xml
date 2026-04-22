@@ -5,40 +5,42 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:layout_marginBottom="12dp">
+    android:layout_marginBottom="16dp">
 
     <!-- Main Card -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardShuttle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="3dp"
         app:cardBackgroundColor="#FFFFFF">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="16dp">
 
             <!-- Top row: icon + info + ETA -->
-            <LinearLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:layout_height="wrap_content">
 
                 <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="34dp"
+                    android:id="@+id/ivBusIcon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:src="@drawable/bus"
-                    android:layout_marginEnd="10dp"/>
+                    android:layout_marginEnd="12dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"/>
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_toEndOf="@id/ivBusIcon"
+                    android:layout_toStartOf="@id/etaBadge"
                     android:orientation="vertical">
 
                     <TextView
@@ -46,7 +48,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Bus 1"
-                        android:textSize="14sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="#1A1A1A"/>
 
@@ -55,33 +57,35 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Driver: John Doe"
-                        android:textSize="11sp"
-                        android:textColor="#888888"/>
+                        android:textSize="12sp"
+                        android:textColor="#666666"/>
 
                     <TextView
                         android:id="@+id/tvPlateNumber"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Plate Number: ABC 1234"
-                        android:textSize="11sp"
+                        android:textSize="12sp"
                         android:textColor="#888888"/>
 
                 </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/etaBadge"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
                     android:orientation="vertical"
                     android:gravity="center"
-                    android:background="@drawable/rounded_yellow_badge">
+                    android:background="@drawable/rounded_yellow_badge"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true">
 
                     <TextView
                         android:id="@+id/tvEta"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="5"
-                        android:textSize="22sp"
+                        android:textSize="26sp"
                         android:textStyle="bold"
                         android:textColor="#1A1A1A"/>
 
@@ -89,12 +93,12 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="min"
-                        android:textSize="11sp"
+                        android:textSize="12sp"
                         android:textColor="#1A1A1A"/>
 
                 </LinearLayout>
 
-            </LinearLayout>
+            </RelativeLayout>
 
             <!-- Stop progress bar -->
             <LinearLayout
@@ -103,8 +107,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="4dp"/>
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"/>
 
             <TextView
                 android:id="@+id/tvYouLabel"
@@ -112,9 +116,45 @@
                 android:layout_height="wrap_content"
                 android:text="You"
                 android:textSize="10sp"
-                android:textColor="#888888"
-                android:gravity="end"
-                android:layout_marginEnd="4dp"/>
+                android:textStyle="bold"
+                android:textColor="#FF5722"
+                android:gravity="center"
+                android:layout_marginTop="-4dp"/>
+
+            <!-- Separator Line -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#EEEEEE"
+                android:layout_marginTop="8dp"/>
+
+            <!-- Additional Info Section -->
+            <LinearLayout
+                android:id="@+id/layoutDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:id="@+id/tvCapacity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Capacity: 12/30"
+                    android:textSize="11sp"
+                    android:textColor="#666666"
+                    android:layout_marginEnd="16dp"/>
+
+                <TextView
+                    android:id="@+id/tvLastUpdated"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Updated: Just now"
+                    android:textSize="11sp"
+                    android:textColor="#666666"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -124,18 +164,39 @@
     <androidx.cardview.widget.CardView
         android:id="@+id/cardMap"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
+        android:layout_height="220dp"
         android:visibility="gone"
-        app:cardCornerRadius="12dp"
+        app:cardCornerRadius="16dp"
         app:cardElevation="2dp"
         app:cardBackgroundColor="#FFFFFF"
         android:layout_marginTop="4dp">
 
-        <com.google.android.gms.maps.MapView
-            android:id="@+id/mapView"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:liteMode="true" />
+            android:layout_height="match_parent">
+
+            <com.google.android.gms.maps.MapView
+                android:id="@+id/mapView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:liteMode="false" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#11000000" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start"
+                android:layout_margin="8dp"
+                android:background="#AAFFFFFF"
+                android:padding="4dp"
+                android:text="Real-time Location"
+                android:textSize="10sp"
+                android:textColor="#1A1A1A"/>
+        </FrameLayout>
 
     </androidx.cardview.widget.CardView>
 
