@@ -7,6 +7,7 @@ public class ShuttleItem {
     private String plateNumber;
     private int eta;
     private boolean isAvailable;
+    private boolean isStandby;
     private double driverLat;
     private double driverLng;
     private int capacity;
@@ -29,6 +30,24 @@ public class ShuttleItem {
         this.capacity    = 30;
         this.currentPassengers = 0;
         this.lastUpdated = "Offline";
+        this.isStandby   = false;
+    }
+
+    public ShuttleItem(String shuttleId, String busName, String driverName,
+                       String plateNumber, int eta, boolean isAvailable,
+                       boolean isStandby, double driverLat, double driverLng) {
+        this.shuttleId   = shuttleId;
+        this.busName     = busName;
+        this.driverName  = driverName;
+        this.plateNumber = plateNumber;
+        this.eta         = eta;
+        this.isAvailable = isAvailable;
+        this.isStandby   = isStandby;
+        this.driverLat   = driverLat;
+        this.driverLng   = driverLng;
+        this.capacity    = 30;
+        this.currentPassengers = 0;
+        this.lastUpdated = "Offline";
     }
 
     public String getShuttleId() { return shuttleId; }
@@ -37,6 +56,7 @@ public class ShuttleItem {
     public String getPlateNumber() { return plateNumber; }
     public int getEta() { return eta; }
     public boolean isAvailable() { return isAvailable; }
+    public boolean isStandby() { return isStandby; }
     public double getDriverLat() { return driverLat; }
     public double getDriverLng() { return driverLng; }
     public int getCapacity() { return capacity; }
@@ -49,6 +69,7 @@ public class ShuttleItem {
     public void setPlateNumber(String plateNumber) { this.plateNumber = plateNumber; }
     public void setEta(int eta) { this.eta = eta; }
     public void setAvailable(boolean available) { isAvailable = available; }
+    public void setStandby(boolean standby) { isStandby = standby; }
     public void setDriverLat(double driverLat) { this.driverLat = driverLat; }
     public void setDriverLng(double driverLng) { this.driverLng = driverLng; }
     public void setCapacity(int capacity) { this.capacity = capacity; }

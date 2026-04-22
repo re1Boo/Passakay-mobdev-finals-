@@ -1,6 +1,8 @@
 package com.usc.passakay;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
@@ -11,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -21,18 +24,28 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.List;
 
 public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleViewHolder> {
 
+    public interface OnShuttleClickListener {
+        void onShuttleClick(ShuttleItem shuttle);
+    }
+
     private final Context context;
     private final List<ShuttleItem> shuttleList;
+    private OnShuttleClickListener listener;
     private int expandedPosition = -1;
 
     public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList) {
         this.context     = context;
         this.shuttleList = shuttleList;
+    }
+
+    public void setOnShuttleClickListener(OnShuttleClickListener listener) {
+        this.listener = listener;
     }
 
     @NonNull
@@ -57,7 +70,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         holder.tvCapacity.setText("Capacity: " + shuttle.getCurrentPassengers() + "/" + shuttle.getCapacity());
         holder.tvLastUpdated.setText("Updated: " + shuttle.getLastUpdated());
 
-        // Unavailable shuttle styling
+        // Styling based on availability
         if (!shuttle.isAvailable()) {
             holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#F5F5F5"));
             holder.tvBusName.setTextColor(Color.parseColor("#AAAAAA"));
@@ -71,16 +84,23 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             holder.layoutDetails.setVisibility(View.VISIBLE);
         }
 
+        // Driver specific: Show Deploy Button if bus is in Standby and we are in Driver mode
+        if (listener != null && shuttle.isStandby()) {
+            holder.layoutDetails.setVisibility(View.VISIBLE);
+            holder.btnDeploy.setVisibility(View.VISIBLE);
+            holder.btnDeploy.setOnClickListener(v -> listener.onShuttleClick(shuttle));
+        } else {
+            holder.btnDeploy.setVisibility(View.GONE);
+        }
+
         // Draw stop indicators
         drawStopIndicators(holder.layoutStops, shuttle.isAvailable());
 
         // Show/hide map section
         holder.cardMap.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
 
-        // Click to expand/collapse
+        // Click logic: Expansion
         holder.cardShuttle.setOnClickListener(v -> {
-            if (!shuttle.isAvailable()) return;
-
             int previousExpanded = expandedPosition;
             expandedPosition = isExpanded ? -1 : holder.getAdapterPosition();
 
@@ -140,6 +160,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     static class ShuttleViewHolder extends RecyclerView.ViewHolder implements OnMapReadyCallback {
         TextView tvBusName, tvDriverName, tvPlateNumber, tvEta, tvCapacity, tvLastUpdated;
         LinearLayout layoutStops, etaBadge, layoutDetails;
+        MaterialButton btnDeploy;
         CardView cardShuttle, cardMap;
         MapView mapView;
         GoogleMap googleMap;
@@ -156,6 +177,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             layoutStops   = itemView.findViewById(R.id.layoutStops);
             etaBadge      = itemView.findViewById(R.id.etaBadge);
             layoutDetails = itemView.findViewById(R.id.layoutDetails);
+            btnDeploy     = itemView.findViewById(R.id.btnDeploy);
             cardShuttle   = itemView.findViewById(R.id.cardShuttle);
             cardMap       = itemView.findViewById(R.id.cardMap);
             mapView       = itemView.findViewById(R.id.mapView);
@@ -169,7 +191,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         @Override
         public void onMapReady(GoogleMap googleMap) {
             this.googleMap = googleMap;
-            googleMap.getUiSettings().setAllGesturesEnabled(false); // Static feel
+            googleMap.getUiSettings().setAllGesturesEnabled(false); 
             MapsInitializer.initialize(itemView.getContext());
             updateMapContents();
         }
@@ -184,6 +206,12 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
             LatLng shuttleLocation = new LatLng(currentShuttle.getDriverLat(), currentShuttle.getDriverLng());
             googleMap.clear();
+            
+            // Enable Blue Dot for User Location
+            if (ActivityCompat.checkSelfPermission(itemView.getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                googleMap.setMyLocationEnabled(true);
+            }
+
             googleMap.addMarker(new MarkerOptions()
                     .position(shuttleLocation)
                     .title(currentShuttle.getBusName())

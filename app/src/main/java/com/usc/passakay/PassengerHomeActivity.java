@@ -21,6 +21,9 @@ import java.util.List;
 
 public class PassengerHomeActivity extends BaseActivity {
 
+    private static final double USC_LAT = 10.3541;
+    private static final double USC_LNG = 123.9115;
+
     private RecyclerView recyclerShuttles;
     private ShuttleAdapter shuttleAdapter;
     private List<ShuttleItem> shuttleList = new ArrayList<>();
@@ -54,7 +57,7 @@ public class PassengerHomeActivity extends BaseActivity {
             Toast.makeText(this, "Opening QR Scanner...", Toast.LENGTH_SHORT).show();
         });
 
-        // Load all shuttles and distinguish between active/inactive
+        // Load all shuttles
         loadShuttles();
 
         // Setup bottom nav
@@ -75,12 +78,10 @@ public class PassengerHomeActivity extends BaseActivity {
     }
 
     private void loadShuttles() {
-        // We load ALL shuttles so the passenger can see what's available vs what's offline (like Bus 4 in your ref)
         db.child("shuttles").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 if (!snapshot.exists()) {
-                    // POPULATE INITIAL DATA if database is empty
                     populateInitialData();
                     return;
                 }
@@ -89,16 +90,18 @@ public class PassengerHomeActivity extends BaseActivity {
                 for (DataSnapshot child : snapshot.getChildren()) {
                     Shuttle shuttle = child.getValue(Shuttle.class);
                     if (shuttle != null) {
-                        // Map Firebase Shuttle to UI ShuttleItem
+                        double lat = (shuttle.getCurrentLat() != 0) ? shuttle.getCurrentLat() : USC_LAT;
+                        double lng = (shuttle.getCurrentLng() != 0) ? shuttle.getCurrentLng() : USC_LNG;
+
                         ShuttleItem item = new ShuttleItem(
                             String.valueOf(shuttle.getShuttleId()),
                             "Bus " + shuttle.getShuttleId(),
-                            shuttle.isActive() ? "Driver Active" : "No Driver",
+                            shuttle.getDriverName() != null ? shuttle.getDriverName() : "No Driver",
                             shuttle.getPlateNumber(),
                             shuttle.isActive() ? calculateETA(shuttle.getCurrentLat(), shuttle.getCurrentLng()) : 0,
-                            shuttle.isActive(), // isAvailable
-                            shuttle.getCurrentLat(),
-                            shuttle.getCurrentLng()
+                            shuttle.isActive(),
+                            lat,
+                            lng
                         );
                         item.setCurrentPassengers(shuttle.getCurrentPassengers());
                         item.setCapacity(shuttle.getCapacity() > 0 ? shuttle.getCapacity() : 30);
@@ -116,24 +119,12 @@ public class PassengerHomeActivity extends BaseActivity {
     }
 
     private void populateInitialData() {
-        // Create 4 initial buses. We set one to Active so you can see the tracking UI immediately.
         db.child("shuttles").child("1").setValue(new Shuttle(1, "GWX-101"));
         db.child("shuttles").child("2").setValue(new Shuttle(2, "GWX-102"));
         db.child("shuttles").child("3").setValue(new Shuttle(3, "GWX-103"));
-        
-        // Let's make Bus 4 active with mock coordinates for demo purposes
-        Shuttle activeBus = new Shuttle(4, "GWX-104");
-        activeBus.setActive(true);
-        activeBus.setCurrentLat(10.3521);
-        activeBus.setCurrentLng(123.9123);
-        activeBus.setCurrentPassengers(12);
-        activeBus.setCapacity(30);
-        activeBus.setLastUpdated("Just now");
-        db.child("shuttles").child("4").setValue(activeBus);
     }
 
     private int calculateETA(double lat, double lng) {
-        // Mock ETA calculation
         if (lat == 0) return 0;
         return (int)(Math.random() * 8) + 2;
     }

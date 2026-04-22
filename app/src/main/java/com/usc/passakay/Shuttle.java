@@ -5,6 +5,8 @@ public class Shuttle {
     private int capacity;
     private String plateNumber;
     private String currentDriverId;
+    private String driverName;
+    private String status;
     private boolean active;
     private double currentLat;
     private double currentLng;
@@ -18,6 +20,7 @@ public class Shuttle {
         this.plateNumber = plateNumber;
         this.active = false;
         this.capacity = 30;
+        this.status = "Unavailable";
     }
 
     public int getShuttleId() { return shuttleId; }
@@ -31,6 +34,12 @@ public class Shuttle {
 
     public String getCurrentDriverId() { return currentDriverId; }
     public void setCurrentDriverId(String currentDriverId) { this.currentDriverId = currentDriverId; }
+
+    public String getDriverName() { return driverName; }
+    public void setDriverName(String driverName) { this.driverName = driverName; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
