@@ -137,8 +137,10 @@ public class DataSeeder {
         // These never change. The tabletId in Shuttle matches the studentId here.
         createUser("bus1@passakay.com", "buspassword1", "BUS-1", "bus");
         createUser("bus2@passakay.com", "buspassword2", "BUS-2", "bus");
-        createTabletUser("tablet_bus1@passakay.com", "tablet123", "tablet_bus1", 1);
-        createTabletUser("tablet_bus2@passakay.com", "tablet123", "tablet_bus2", 2);
+
+        //DO NOT MIND
+//        createTabletUser("tablet_bus1@passakay.com", "tablet123", "tablet_bus1", 1);
+//        createTabletUser("tablet_bus2@passakay.com", "tablet123", "tablet_bus2", 2);
     }
 
     private void createUser(String email, String password, String studentId, String role) {
@@ -162,35 +164,36 @@ public class DataSeeder {
     }
 
     // Tablet accounts have role="tablet" and a shuttleId linking them to a bus
-    private void createTabletUser(String email, String password, String tabletId, int shuttleId) {
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener(authResult -> {
-                    String uid = authResult.getUser().getUid();
-
-                    User user = new User();
-                    user.setEmail(email);
-                    user.setStudentId(tabletId);
-                    user.setRole("bus");
-                    user.setStatus("active");
-                    user.setDepartmentId(0);
-                    user.setCourseId(0);
-
-                    db.child("users").child(uid).setValue(user)
-                            .addOnSuccessListener(a ->
-                                    Log.d(TAG, "Tablet user saved: " + email))
-                            .addOnFailureListener(err ->
-                                    Log.e(TAG, "Failed to save tablet user: " + err.getMessage()));
-                })
-                .addOnFailureListener(e -> {
-                    if (e instanceof FirebaseAuthUserCollisionException) {
-                        mAuth.signInWithEmailAndPassword(email, password)
-                                .addOnSuccessListener(authResult -> {
-                                    String uid = authResult.getUser().getUid();
-                                    Log.d(TAG, "Tablet user exists: " + email);
-                                });
-                    }
-                });
-    }
+    // DO NOT USE
+//    private void createTabletUser(String email, String password, String tabletId, int shuttleId) {
+//        mAuth.createUserWithEmailAndPassword(email, password)
+//                .addOnSuccessListener(authResult -> {
+//                    String uid = authResult.getUser().getUid();
+//
+//                    User user = new User();
+//                    user.setEmail(email);
+//                    user.setStudentId(tabletId);
+//                    user.setRole("bus");
+//                    user.setStatus("active");
+//                    user.setDepartmentId(0);
+//                    user.setCourseId(0);
+//
+//                    db.child("users").child(uid).setValue(user)
+//                            .addOnSuccessListener(a ->
+//                                    Log.d(TAG, "Tablet user saved: " + email))
+//                            .addOnFailureListener(err ->
+//                                    Log.e(TAG, "Failed to save tablet user: " + err.getMessage()));
+//                })
+//                .addOnFailureListener(e -> {
+//                    if (e instanceof FirebaseAuthUserCollisionException) {
+//                        mAuth.signInWithEmailAndPassword(email, password)
+//                                .addOnSuccessListener(authResult -> {
+//                                    String uid = authResult.getUser().getUid();
+//                                    Log.d(TAG, "Tablet user exists: " + email);
+//                                });
+//                    }
+//                });
+//    }
 
     private void saveUserData(String uid, String email, String studentId, String role) {
         User user = new User();
