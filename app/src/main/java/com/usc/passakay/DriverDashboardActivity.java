@@ -47,7 +47,8 @@ public class DriverDashboardActivity extends BaseActivity {
 
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
-        shuttleAdapter = new ShuttleAdapter(this, shuttleList);
+        // Fixed: Pass getSupportFragmentManager() to match the ShuttleAdapter constructor
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         loadShuttles();

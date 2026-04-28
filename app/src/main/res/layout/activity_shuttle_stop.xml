@@ -11,8 +11,10 @@
         android:id="@+id/headerInclude"
         layout="@layout/header"
         android:layout_width="match_parent"
-        android:layout_height="75dp"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <!-- Main Content Area with Bottom Sheet support -->
     <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -111,7 +113,7 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="wrap_content"
         android:background="#FFFFFF"
         app:elevation="16dp"
         app:menu="@menu/menu"

@@ -1,17 +1,12 @@
 package com.usc.passakay;
 
-import com.google.firebase.database.IgnoreExtraProperties;
-
-@IgnoreExtraProperties
 public class Shuttle {
     private int shuttleId;
-    private int capacity = 30;
+    private int capacity;
     private String plateNumber;
-    private String status = "Standby";
-    private String driverName = "No driver";
-    private String driverId = "";
-    
-    // Fields for Activity compatibility
+    private String status = "Standby"; // Default value
+    private String driverName = "No driver"; // Default value
+    private String driverId = ""; // Default value
     private boolean active;
     private String currentDriverId;
     private double currentLat;
@@ -28,7 +23,6 @@ public class Shuttle {
         this.driverName = "No driver";
         this.driverId = "";
         this.active = false;
-        this.capacity = 30;
     }
 
     public int getShuttleId() { return shuttleId; }

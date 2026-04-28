@@ -2,11 +2,13 @@ package com.usc.passakay;
 
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
@@ -20,26 +22,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DRIVER HOME ACTIVITY - Initial Setup
- * This activity handles the driver's ability to select a shuttle and start/end a trip.
- * 
- * TO THE NEXT DEVELOPER:
- * 1. IMPLEMENT REAL GPS: Use FusedLocationProviderClient to get real-time location.
- * 2. FOREGROUND SERVICE: Move location updates to a Foreground Service so it keeps 
- *    tracking even if the app is minimized.
- * 3. PERMISSIONS: Ensure ACCESS_FINE_LOCATION and POST_NOTIFICATIONS (for Android 13+) 
- *    permissions are handled.
+ * DRIVER HOME ACTIVITY
+ * This activity handles the driver's ability to select a shuttle and end a trip.
+ * The selection is now handled via RecyclerView cards.
  */
 public class DriverHomeActivity extends BaseActivity {
 
-    private Spinner spinnerShuttles;
-    private MaterialButton btnStartTrip, btnEndTrip;
+    private RecyclerView recyclerShuttles;
+    private ShuttleAdapter shuttleAdapter;
+    private MaterialButton btnEndTrip;
     private LinearLayout layoutSelection, layoutActiveTrip;
     private TextView tvActiveBus;
     
     private DatabaseReference db;
     private String currentUserId;
-    private List<Shuttle> availableShuttles = new ArrayList<>();
+    private List<ShuttleItem> shuttleList = new ArrayList<>();
     private String selectedShuttleId = null;
 
     @Override
@@ -51,8 +48,13 @@ public class DriverHomeActivity extends BaseActivity {
         currentUserId = FirebaseAuth.getInstance().getUid();
 
         // Initialize UI
-        spinnerShuttles = findViewById(R.id.spinnerShuttles);
-        btnStartTrip = findViewById(R.id.btnStartTrip);
+        recyclerShuttles = findViewById(R.id.recyclerShuttles);
+        recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
+        
+        // Fixed: Pass getSupportFragmentManager() as the third argument
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
+        recyclerShuttles.setAdapter(shuttleAdapter);
+
         btnEndTrip = findViewById(R.id.btnEndTrip);
         layoutSelection = findViewById(R.id.layoutSelection);
         layoutActiveTrip = findViewById(R.id.layoutActiveTrip);
@@ -61,81 +63,91 @@ public class DriverHomeActivity extends BaseActivity {
         // 1. Initialize starter shuttles in DB if they don't exist
         initializeStarterShuttles();
 
-        // 2. Load shuttles for the Spinner
-        loadShuttlesIntoSpinner();
+        // 2. Load shuttles for the list
+        loadShuttles();
 
-        // 3. Handle Start Trip
-        btnStartTrip.setOnClickListener(v -> startTrip());
-
-        // 4. Handle End Trip
+        // 3. Handle End Trip
         btnEndTrip.setOnClickListener(v -> endTrip());
+        
+        checkIfAlreadyDriving();
     }
 
     private void initializeStarterShuttles() {
         db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot snapshot) {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (!snapshot.exists()) {
-                    // Add 3 static starter shuttles
                     db.child("shuttles").child("1").setValue(new Shuttle(1, "GWX-101"));
                     db.child("shuttles").child("2").setValue(new Shuttle(2, "GWX-102"));
                     db.child("shuttles").child("3").setValue(new Shuttle(3, "GWX-103"));
                 }
             }
-            @Override public void onCancelled(DatabaseError error) {}
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    private void loadShuttlesIntoSpinner() {
+    private void loadShuttles() {
         db.child("shuttles").addValueEventListener(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                availableShuttles.clear();
-                List<String> busNames = new ArrayList<>();
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                shuttleList.clear();
                 for (DataSnapshot child : snapshot.getChildren()) {
                     Shuttle s = child.getValue(Shuttle.class);
-                    if (s != null && (!s.isActive() || (s.getCurrentDriverId() != null && s.getCurrentDriverId().equals(currentUserId)))) {
-                        availableShuttles.add(s);
-                        busNames.add("Bus " + s.getShuttleId() + " (" + s.getPlateNumber() + ")");
+                    if (s != null) {
+                        boolean isStandby = "Standby".equals(s.getStatus());
+                        boolean isAvailable = !"Unavailable".equals(s.getStatus());
+
+                        ShuttleItem item = new ShuttleItem(
+                                String.valueOf(s.getShuttleId()),
+                                "Bus " + s.getShuttleId(),
+                                s.getDriverName(),
+                                s.getPlateNumber(),
+                                0,
+                                isAvailable,
+                                isStandby,
+                                10.3541, 123.9115
+                        );
+                        shuttleList.add(item);
                     }
                 }
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(DriverHomeActivity.this, 
-                        android.R.layout.simple_spinner_item, busNames);
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                spinnerShuttles.setAdapter(adapter);
+                shuttleAdapter.notifyDataSetChanged();
             }
-            @Override public void onCancelled(DatabaseError error) {}
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    private void startTrip() {
-        int pos = spinnerShuttles.getSelectedItemPosition();
-        if (pos < 0) return;
+    private void checkIfAlreadyDriving() {
+        db.child("shuttles").orderByChild("currentDriverId").equalTo(currentUserId)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            for (DataSnapshot child : snapshot.getChildren()) {
+                                Shuttle shuttle = child.getValue(Shuttle.class);
+                                if (shuttle != null && shuttle.isActive()) {
+                                    selectedShuttleId = String.valueOf(shuttle.getShuttleId());
+                                    showActiveUI(shuttle.getShuttleId());
+                                    return;
+                                }
+                            }
+                        }
+                        showSelectionUI();
+                    }
 
-        Shuttle selected = availableShuttles.get(pos);
-        selectedShuttleId = String.valueOf(selected.getShuttleId());
-
-        // Update Firebase: This is the critical link to the Passenger Side
-        DatabaseReference shuttleRef = db.child("shuttles").child(selectedShuttleId);
-        shuttleRef.child("active").setValue(true);
-        shuttleRef.child("currentDriverId").setValue(currentUserId);
-        shuttleRef.child("lastUpdated").setValue("Just started");
-        
-        // MOCK LOCATION: NEXT DEVELOPER - replace this with real FusedLocationProvider updates
-        shuttleRef.child("currentLat").setValue(10.3521); 
-        shuttleRef.child("currentLng").setValue(123.9123);
-
-        showActiveUI(selected.getShuttleId());
-        Toast.makeText(this, "Trip Started! Passengers can now see you.", Toast.LENGTH_SHORT).show();
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
     }
 
     private void endTrip() {
         if (selectedShuttleId == null) return;
 
-        // Update Firebase: Stops the shuttle from appearing on the Passenger side
         DatabaseReference shuttleRef = db.child("shuttles").child(selectedShuttleId);
         shuttleRef.child("active").setValue(false);
         shuttleRef.child("currentDriverId").setValue(null);
+        shuttleRef.child("status").setValue("Standby");
+        shuttleRef.child("driverName").setValue("No driver");
+        shuttleRef.child("driverId").setValue("");
 
         showSelectionUI();
         selectedShuttleId = null;

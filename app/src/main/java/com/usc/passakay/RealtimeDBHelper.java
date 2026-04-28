@@ -1,5 +1,6 @@
 package com.usc.passakay;
 
+import android.util.Log;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -7,14 +8,18 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class RealtimeDBHelper {
 
     private final DatabaseReference db;
+    private static final String TAG = "RealtimeDBHelper";
 
     public RealtimeDBHelper() {
+        // Ensure this URL matches your Firebase Console exactly
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
     }
 
@@ -33,6 +38,7 @@ public class RealtimeDBHelper {
                     public void onDataChange(DataSnapshot snapshot) {
                         User user = snapshot.getValue(User.class);
                         if (user != null) onSuccess.accept(user);
+                        else onFailure.accept("User not found");
                     }
                     @Override
                     public void onCancelled(DatabaseError error) {
@@ -238,5 +244,41 @@ public class RealtimeDBHelper {
                         onFailure.accept(error.getMessage());
                     }
                 });
+    }
+
+    public void logScanEvent(String passengerUid, String qrContent, Runnable onSuccess, Consumer<String> onFailure) {
+        if (qrContent == null) {
+            onFailure.accept("QR Content is null");
+            return;
+        }
+        
+        String content = qrContent.trim();
+        DatabaseReference locationRef;
+        
+        if (content.equals("SAFAD.com") || content.equals("SAS.com") || content.equals("BUNZEL.com")) {
+            locationRef = db.child("scans").child(content.replace(".", "_"));
+        } else {
+            locationRef = db.child("scans").child("OTHER");
+        }
+
+        String scanId = locationRef.push().getKey();
+        long timestamp = System.currentTimeMillis();
+
+        Map<String, Object> scanData = new HashMap<>();
+        scanData.put("passengerUid", passengerUid);
+        scanData.put("qrContent", qrContent);
+        scanData.put("timestamp", timestamp);
+
+        if (scanId != null) {
+            locationRef.child(scanId).setValue(scanData)
+                    .addOnSuccessListener(a -> {
+                        Log.d(TAG, "Successfully logged scan to: " + locationRef.getPath().toString());
+                        onSuccess.run();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Failed to log scan: " + e.getMessage());
+                        onFailure.accept(e.getMessage());
+                    });
+        }
     }
 }

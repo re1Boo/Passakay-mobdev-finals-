@@ -5,17 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -39,72 +38,93 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
     private final Context context;
     private final List<ShuttleItem> shuttleList;
+    private final FragmentManager fragmentManager;
     private int expandedPosition = -1;
     private DatabaseReference db;
+    private boolean isPassengerView = false;
 
-    public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList) {
-        this.context     = context;
+    public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList, FragmentManager fragmentManager) {
+        this.context = context;
         this.shuttleList = shuttleList;
+        this.fragmentManager = fragmentManager;
         this.db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+        this.isPassengerView = context instanceof PassengerHomeActivity;
     }
 
     @NonNull
     @Override
     public ShuttleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Use item_shuttle_2 for driver side consistency
-        View view = LayoutInflater.from(context).inflate(R.layout.item_shuttle_2, parent, false);
+        int layoutId = isPassengerView ? R.layout.item_shuttle : R.layout.item_shuttle_2;
+        View view = LayoutInflater.from(context).inflate(layoutId, parent, false);
         return new ShuttleViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ShuttleViewHolder holder, int position) {
         ShuttleItem shuttle = shuttleList.get(position);
-        boolean isExpanded  = position == expandedPosition;
+        boolean isExpanded = (position == expandedPosition);
 
-        // Set bus info
         holder.tvBusName.setText(shuttle.getBusName());
-        holder.tvDriverName.setText("Driver: " + shuttle.getDriverName());
-        holder.tvPlateNumber.setText("Plate: " + shuttle.getPlateNumber());
+        holder.tvDriverName.setText("Driver: " + (shuttle.isAvailable() ? shuttle.getDriverName() : "Unavailable"));
+        holder.tvPlateNumber.setText("Plate Number: " + shuttle.getPlateNumber());
 
-        // Styling based on availability
-        if (!shuttle.isAvailable()) {
-            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
-            holder.tvBusName.setTextColor(Color.parseColor("#AAAAAA"));
+        if (isPassengerView) {
+            if (holder.tvEta != null) {
+                holder.tvEta.setText(String.valueOf(shuttle.getEta()));
+            }
+            if (holder.etaBadge != null) {
+                if (!shuttle.isAvailable()) {
+                    holder.etaBadge.setBackgroundResource(R.drawable.rounded_gray_badge);
+                    holder.tvEta.setText("0");
+                } else {
+                    holder.etaBadge.setBackgroundResource(R.drawable.rounded_yellow_badge);
+                }
+            }
+            
+            if (!shuttle.isAvailable()) {
+                holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
+                holder.tvBusName.setTextColor(Color.parseColor("#757575"));
+            } else {
+                holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#F5F5F5"));
+                holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
+            }
         } else {
-            holder.cardShuttle.setCardBackgroundColor(Color.WHITE);
-            holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
+            if (holder.btnStatus != null) {
+                if (shuttle.isStandby()) {
+                    holder.btnStatus.setText("Standby");
+                    holder.btnStatus.setBackgroundResource(R.drawable.rounded_green_btn);
+                    holder.btnStatus.setOnClickListener(v -> deployShuttle(shuttle));
+                } else {
+                    holder.btnStatus.setText("Deployed");
+                    holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
+                    holder.btnStatus.setOnClickListener(null);
+                }
+            }
         }
 
-        // Status Button Logic for Driver side (item_shuttle_2)
-        if (shuttle.isStandby()) {
-            holder.btnStatus.setText("Standby");
-            holder.btnStatus.setBackgroundResource(R.drawable.rounded_green_btn);
-            holder.btnStatus.setBackgroundTintList(null);
-            holder.btnStatus.setOnClickListener(v -> deployShuttle(shuttle));
-        } else {
-            holder.btnStatus.setText("Deployed");
-            holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
-            holder.btnStatus.setBackgroundTintList(null);
-            holder.btnStatus.setOnClickListener(null); // Already deployed
+        // Handle Map Visibility
+        if (holder.cardMap != null) {
+            holder.cardMap.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+            if (isExpanded) {
+                holder.bindMap(shuttle);
+            }
         }
 
-        // Show/hide map section
-        holder.cardMap.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
-
-        // Click logic: Expansion
+        // Toggle Expand/Collapse on card click
         holder.cardShuttle.setOnClickListener(v -> {
-            if (!shuttle.isAvailable()) return;
-            int previousExpanded = expandedPosition;
-            expandedPosition = isExpanded ? -1 : holder.getAdapterPosition();
+            int currentPos = holder.getBindingAdapterPosition();
+            if (currentPos == RecyclerView.NO_POSITION) return;
 
-            if (previousExpanded != -1) notifyItemChanged(previousExpanded);
+            int oldPos = expandedPosition;
+            if (oldPos == currentPos) {
+                expandedPosition = -1;
+            } else {
+                expandedPosition = currentPos;
+            }
+
+            if (oldPos != -1) notifyItemChanged(oldPos);
             if (expandedPosition != -1) notifyItemChanged(expandedPosition);
         });
-
-        // Initialize and bind map if expanded
-        if (isExpanded) {
-            holder.bindMap(shuttle);
-        }
     }
 
     private void deployShuttle(ShuttleItem shuttleItem) {
@@ -124,7 +144,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
                     shuttleRef.child("driverId").setValue(uid);
 
                     Intent intent = new Intent(context, ShuttleStopActivity.class);
-                    intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME,   shuttleItem.getBusName());
+                    intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, shuttleItem.getBusName());
                     intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LAT, shuttleItem.getDriverLat());
                     intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LNG, shuttleItem.getDriverLng());
                     intent.putExtra("shuttleId", shuttleItem.getShuttleId());
@@ -143,7 +163,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     }
 
     static class ShuttleViewHolder extends RecyclerView.ViewHolder implements OnMapReadyCallback {
-        TextView tvBusName, tvDriverName, tvPlateNumber;
+        TextView tvBusName, tvDriverName, tvPlateNumber, tvEta;
+        View etaBadge;
         Button btnStatus;
         CardView cardShuttle, cardMap;
         MapView mapView;
@@ -152,13 +173,15 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
         ShuttleViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvBusName     = itemView.findViewById(R.id.tvBusName);
-            tvDriverName  = itemView.findViewById(R.id.tvDriverName);
+            tvBusName = itemView.findViewById(R.id.tvBusName);
+            tvDriverName = itemView.findViewById(R.id.tvDriverName);
             tvPlateNumber = itemView.findViewById(R.id.tvPlateNumber);
-            btnStatus     = itemView.findViewById(R.id.btnStatus);
-            cardShuttle   = itemView.findViewById(R.id.cardShuttle);
-            cardMap       = itemView.findViewById(R.id.cardMap);
-            mapView       = itemView.findViewById(R.id.mapView);
+            btnStatus = itemView.findViewById(R.id.btnStatus);
+            tvEta = itemView.findViewById(R.id.tvEta);
+            etaBadge = itemView.findViewById(R.id.etaBadge);
+            cardShuttle = itemView.findViewById(R.id.cardShuttle);
+            cardMap = itemView.findViewById(R.id.cardMap);
+            mapView = itemView.findViewById(R.id.mapView);
 
             if (mapView != null) {
                 mapView.onCreate(null);
@@ -176,6 +199,9 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
         void bindMap(ShuttleItem shuttle) {
             currentShuttle = shuttle;
+            if (mapView != null) {
+                mapView.onResume(); // Ensure MapView is resumed when bound
+            }
             updateMapContents();
         }
 

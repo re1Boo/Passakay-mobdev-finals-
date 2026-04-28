@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:animateLayoutChanges="true"
     android:layout_marginBottom="16dp">
 
     <!-- Main Card -->
@@ -12,163 +13,153 @@
         android:id="@+id/cardShuttle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="3dp"
-        app:cardBackgroundColor="#FFFFFF">
+        app:cardCornerRadius="20dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="#F5F5F5"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?android:attr/selectableItemBackground">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:padding="16dp">
 
-            <!-- Top row: icon + info + ETA -->
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+            <!-- Left Info Section -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-                <ImageView
-                    android:id="@+id/ivBusIcon"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/bus"
-                    android:layout_marginEnd="12dp"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"/>
-
+                <!-- Bus Name with Icon -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_toEndOf="@id/ivBusIcon"
-                    android:layout_toStartOf="@id/etaBadge"
-                    android:orientation="vertical">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:id="@+id/ivBusIcon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/bus"
+                        android:layout_marginEnd="8dp"/>
 
                     <TextView
                         android:id="@+id/tvBusName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Bus 1"
-                        android:textSize="18sp"
+                        android:textSize="24sp"
                         android:textStyle="bold"
                         android:textColor="#1A1A1A"/>
-
-                    <TextView
-                        android:id="@+id/tvDriverName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Driver: John Doe"
-                        android:textSize="12sp"
-                        android:textColor="#666666"/>
-
-                    <TextView
-                        android:id="@+id/tvPlateNumber"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Plate Number: ABC 1234"
-                        android:textSize="12sp"
-                        android:textColor="#888888"/>
-
                 </LinearLayout>
 
-                <LinearLayout
-                    android:id="@+id/etaBadge"
-                    android:layout_width="70dp"
-                    android:layout_height="70dp"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:background="@drawable/rounded_yellow_badge"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true">
-
-                    <TextView
-                        android:id="@+id/tvEta"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="5"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:textColor="#1A1A1A"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="min"
-                        android:textSize="12sp"
-                        android:textColor="#1A1A1A"/>
-
-                </LinearLayout>
-
-            </RelativeLayout>
-
-            <!-- Stop progress bar -->
-            <LinearLayout
-                android:id="@+id/layoutStops"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"/>
-
-            <TextView
-                android:id="@+id/tvYouLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="You"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:textColor="#FF5722"
-                android:gravity="center"
-                android:layout_marginTop="-4dp"/>
-
-            <!-- Separator Line -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#EEEEEE"
-                android:layout_marginTop="8dp"/>
-
-            <!-- Additional Info Section -->
-            <LinearLayout
-                android:id="@+id/layoutDetails"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp"
-                android:gravity="center_horizontal">
-
                 <TextView
-                    android:id="@+id/tvCapacity"
+                    android:id="@+id/tvDriverName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Capacity: 12/30"
-                    android:textSize="11sp"
-                    android:textColor="#666666"
-                    android:layout_marginEnd="16dp"/>
+                    android:text="Driver: John Doe"
+                    android:textSize="13sp"
+                    android:textColor="#444444"
+                    android:layout_marginTop="8dp"/>
 
                 <TextView
-                    android:id="@+id/tvLastUpdated"
+                    android:id="@+id/tvPlateNumber"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Updated: Just now"
-                    android:textSize="11sp"
-                    android:textColor="#666666"/>
+                    android:text="Plate Number: ABC 1234"
+                    android:textSize="13sp"
+                    android:textColor="#444444"
+                    android:layout_marginTop="2dp"/>
+
+                <!-- Stop Progress Simulation UI -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp"
+                        android:background="#757575"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="8"
+                        android:gravity="center_vertical">
+
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                        <ImageView android:layout_width="20dp" android:layout_height="12dp" android:src="@drawable/bus" android:tint="#FFEA08" />
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <View android:layout_width="10dp" android:layout_height="10dp" android:background="@drawable/loading_dot" android:backgroundTint="#FF5722" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="You"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="#1A1A1A"/>
+                        </LinearLayout>
+
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
+                    </LinearLayout>
+                </RelativeLayout>
 
             </LinearLayout>
 
-            <!-- Deploy Button for Drivers -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeploy"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="DEPLOY SHUTTLE"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                app:backgroundTint="#4CAF50"
-                app:cornerRadius="10dp"
-                android:visibility="gone"/>
+            <!-- Right ETA Section -->
+            <LinearLayout
+                android:id="@+id/etaBadge"
+                android:layout_width="100dp"
+                android:layout_height="110dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_yellow_badge"
+                android:layout_marginStart="16dp">
+
+                <TextView
+                    android:id="@+id/tvEta"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="5"
+                    android:textSize="42sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A1A"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="min"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A1A"
+                    android:layout_marginTop="-10dp"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -182,34 +173,22 @@
         android:visibility="gone"
         app:cardCornerRadius="16dp"
         app:cardElevation="2dp"
-        app:cardBackgroundColor="#FFFFFF"
-        android:layout_marginTop="4dp">
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        app:cardBackgroundColor="#FFFFFF">
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:padding="2dp"
+            android:background="#4CAF50">
 
             <com.google.android.gms.maps.MapView
                 android:id="@+id/mapView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                app:liteMode="false" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="#11000000" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|start"
-                android:layout_margin="8dp"
-                android:background="#AAFFFFFF"
-                android:padding="4dp"
-                android:text="Real-time Location"
-                android:textSize="10sp"
-                android:textColor="#1A1A1A"/>
+                app:liteMode="true" />
         </FrameLayout>
 
     </androidx.cardview.widget.CardView>

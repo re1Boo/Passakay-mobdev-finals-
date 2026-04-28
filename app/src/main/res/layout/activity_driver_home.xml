@@ -44,34 +44,13 @@
                 android:textColor="#666666"
                 android:layout_marginBottom="10dp"/>
 
-            <!-- Spinner and Button for DriverHomeActivity compatibility -->
-            <Spinner
-                android:id="@+id/spinnerShuttles"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@android:drawable/btn_dropdown"
-                android:padding="8dp"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnStartTrip"
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:layout_marginTop="15dp"
-                android:text="START TRIP"
-                android:backgroundTint="#4CAF50"
-                android:textColor="#FFFFFF"
-                app:cornerRadius="10dp"/>
-
             <!-- Replaced Spinner with RecyclerView to follow previous UI (cards) -->
-            <!-- Kept with visibility="gone" to satisfy both potential use cases -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerShuttles"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="20dp"
-                android:visibility="gone"/>
+                android:paddingBottom="20dp"/>
 
         </LinearLayout>
 
