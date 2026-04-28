@@ -24,6 +24,7 @@ public class DataSeeder {
         seedShuttles();
         seedShuttleStops();
         seedUsers();
+        seedBusTabletAccounts();
     }
 
     private void seedDepartments() {
@@ -133,6 +134,52 @@ public class DataSeeder {
         createUser("passenger@passakay.com", "password123", "21101234", "passenger");
         // Admin user
         createUser("admin@passakay.com", "admin123456", "00000001", "admin");
+    }
+
+    private void seedBusTabletAccounts() {
+        int[] busIds = {1, 2}; // Add more as you add shuttles
+        for (int id : busIds) {
+            String email     = "bus" + id + "@passakay.com";
+            String password  = "buspassword" + id;
+            String shuttleId = String.valueOf(id);
+            createBusTabletUser(email, password, shuttleId);
+        }
+    }
+
+    private void createBusTabletUser(String email, String password, String shuttleId) {
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener(authResult -> {
+                    String uid = authResult.getUser().getUid();
+                    saveBusTabletUserData(uid, email, shuttleId);
+                })
+                .addOnFailureListener(e -> {
+                    if (e instanceof FirebaseAuthUserCollisionException) {
+                        Log.d(TAG, "Bus tablet account already exists: " + email);
+                        // Still make sure DB record is up to date
+                        mAuth.signInWithEmailAndPassword(email, password)
+                                .addOnSuccessListener(authResult -> {
+                                    saveBusTabletUserData(authResult.getUser().getUid(), email, shuttleId);
+                                })
+                                .addOnFailureListener(err -> Log.e(TAG, "Sign in failed for bus tablet " + email + ": " + err.getMessage()));
+                    } else {
+                        Log.e(TAG, "Failed to create bus tablet account " + email + ": " + e.getMessage());
+                    }
+                });
+    }
+
+    private void saveBusTabletUserData(String uid, String email, String shuttleId) {
+        User user = new User();
+        user.setEmail(email);
+        user.setStudentId("BUS-" + shuttleId);
+        user.setRole("bus");           // special role — drives routing in LoginActivity
+        user.setStatus("active");
+        user.setShuttleId(shuttleId);  // which bus this tablet belongs to
+        user.setDepartmentId(0);
+        user.setCourseId(0);
+
+        db.child("users").child(uid).setValue(user)
+                .addOnSuccessListener(a -> Log.d(TAG, "Bus tablet account saved: " + email))
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to save bus tablet account: " + e.getMessage()));
     }
 
     private void createUser(String email, String password, String studentId, String role) {

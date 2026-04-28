@@ -133,6 +133,10 @@ public class LoginActivity extends BaseActivity {
                         if (user != null) {
                             Intent intent;
                             switch (user.getRole()) {
+                                case "bus":
+                                    intent = new Intent(LoginActivity.this, DriverDashboardActivity.class);
+                                    intent.putExtra("shuttleId", user.getShuttleId());
+                                    break;
                                 case "driver":
                                     intent = new Intent(LoginActivity.this, DriverDashboardActivity.class);
                                     break;
