@@ -102,9 +102,27 @@ public class PassengerHomeActivity extends BaseActivity {
             toggleWaitingStatus();
         }
         
-        // You could also log this to the database
+        // Update to match the "scans" structure shown in your friend's screenshot
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        
+        // 1. Update user's own record
         db.child("users").child(uid).child("lastScannedStop").setValue(contents);
+        db.child("users").child(uid).child("waitingAt").setValue(contents); // Added for consistency
+        db.child("users").child(uid).child("isWaiting").setValue(true);
+
+        // 2. Update the "scans" node
+        // Replace dots with underscores for node keys (e.g., BUNZEL.com -> BUNZEL_com)
+        String scanNode = contents.replace(".", "_"); 
+        String scanId = db.child("scans").child(scanNode).push().getKey();
+        
+        java.util.Map<String, Object> scanData = new java.util.HashMap<>();
+        scanData.put("passengerUid", uid);
+        scanData.put("qrContent", contents);
+        scanData.put("timestamp", System.currentTimeMillis());
+
+        if (scanId != null) {
+            db.child("scans").child(scanNode).child(scanId).setValue(scanData);
+        }
     }
 
     private void toggleWaitingStatus() {

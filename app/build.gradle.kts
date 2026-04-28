@@ -43,11 +43,14 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)        // ← Firebase Authentication
     implementation(libs.firebase.database)    // ← Realtime Database
+    implementation(libs.firebase.storage)     // ← Firebase Storage
 
     // Google Maps
     implementation(libs.play.services.maps)   // ← keep only this one
 
     implementation(libs.circleimageview)
+    implementation(libs.glide)
+    annotationProcessor(libs.glide.compiler)
     
     // QR Code Scanning
     implementation(libs.zxing.android.embedded)

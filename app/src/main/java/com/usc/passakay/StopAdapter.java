@@ -6,22 +6,36 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder> {
 
     private final Context context;
     private final List<StopItem> stopList;
+    private final DatabaseReference db;
+    private final Set<Integer> expandedPositions = new HashSet<>();
 
     public StopAdapter(Context context, List<StopItem> stopList) {
         this.context  = context;
         this.stopList = stopList;
+        this.db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
     }
 
     @NonNull
@@ -39,37 +53,101 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
         holder.tvWaiting.setText("Waiting: " + stop.getWaitingCount());
         holder.tvDistance.setText("Distance: " + stop.getDistanceMeters() + "m");
 
-        // Yellow button = passengers waiting; gray = no passengers
         if (stop.getWaitingCount() > 0) {
             holder.btnPickUp.setEnabled(true);
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_yellow_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#000000"));
-            holder.btnPickUp.setBackgroundTintList(null);
             holder.btnPickUp.setAlpha(1.0f);
+            holder.ivExpand.setVisibility(View.VISIBLE);
+            
+            // Toggle expansion
+            boolean isExpanded = expandedPositions.contains(position);
+            holder.recyclerPassengers.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+            holder.ivExpand.setRotation(isExpanded ? 180 : 0);
+
+            if (isExpanded) {
+                loadPassengersForStop(stop.getStopName(), holder.recyclerPassengers);
+            }
         } else {
             holder.btnPickUp.setEnabled(false);
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_gray_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#888888"));
-            holder.btnPickUp.setBackgroundTintList(null);
-            holder.btnPickUp.setAlpha(0.5f); // Make it look grayed out
+            holder.btnPickUp.setAlpha(0.5f);
+            holder.ivExpand.setVisibility(View.GONE);
+            holder.recyclerPassengers.setVisibility(View.GONE);
+            expandedPositions.remove(position);
         }
 
-        holder.btnPickUp.setOnClickListener(v -> {
-            Toast.makeText(context,
-                    "Picking up at " + stop.getStopName(),
-                    Toast.LENGTH_SHORT).show();
-            // Real implementation would update Firebase here
+        holder.layoutMain.setOnClickListener(v -> {
+            if (stop.getWaitingCount() > 0) {
+                if (expandedPositions.contains(position)) {
+                    expandedPositions.remove(position);
+                } else {
+                    expandedPositions.add(position);
+                }
+                notifyItemChanged(position);
+            }
+        });
+
+        holder.btnPickUp.setOnClickListener(v -> clearWaitingStatusAtStop(stop.getStopName()));
+    }
+
+    private void loadPassengersForStop(String stopName, RecyclerView rv) {
+        db.child("users").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<User> passengers = new ArrayList<>();
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    User user = ds.getValue(User.class);
+                    Boolean isWaiting = ds.child("isWaiting").getValue(Boolean.class);
+                    String userStop = ds.child("lastScannedStop").getValue(String.class);
+
+                    if (user != null && isWaiting != null && isWaiting && userStop != null) {
+                        if (isMatch(userStop, stopName)) {
+                            passengers.add(user);
+                        }
+                    }
+                }
+                rv.setLayoutManager(new LinearLayoutManager(context));
+                rv.setAdapter(new PassengerAdapter(context, passengers));
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    @Override
-    public int getItemCount() {
-        return stopList.size();
+    private void clearWaitingStatusAtStop(String stopName) {
+        db.child("users").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    String userStop = ds.child("lastScannedStop").getValue(String.class);
+                    if (userStop != null && isMatch(userStop, stopName)) {
+                        ds.getRef().child("isWaiting").setValue(false);
+                        ds.getRef().child("lastScannedStop").setValue("");
+                        ds.getRef().child("waitingAt").setValue("");
+                    }
+                }
+                Toast.makeText(context, "Passengers picked up!", Toast.LENGTH_SHORT).show();
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
+
+    private boolean isMatch(String s1, String s2) {
+        if (s1 == null || s2 == null) return false;
+        String v1 = s1.toLowerCase().trim();
+        String v2 = s2.toLowerCase().trim();
+        return v1.contains(v2) || v2.contains(v1);
+    }
+
+    @Override public int getItemCount() { return stopList.size(); }
 
     static class StopViewHolder extends RecyclerView.ViewHolder {
         TextView tvStopName, tvWaiting, tvDistance;
         Button btnPickUp;
+        RecyclerView recyclerPassengers;
+        View layoutMain;
+        ImageView ivExpand;
 
         StopViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -77,6 +155,9 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
             tvWaiting  = itemView.findViewById(R.id.tvWaiting);
             tvDistance = itemView.findViewById(R.id.tvDistance);
             btnPickUp  = itemView.findViewById(R.id.btnPickUp);
+            recyclerPassengers = itemView.findViewById(R.id.recyclerPassengers);
+            layoutMain = itemView.findViewById(R.id.layoutMain);
+            ivExpand = itemView.findViewById(R.id.ivExpand);
         }
     }
 }

@@ -10,11 +10,12 @@ public class User {
     private String status;
     private String email;
     private String studentId;
+    private String profileImageUrl;
 
     public User() {}
 
     public User(int userId, int departmentId, int courseId, String firstName, String lastName,
-                String role, String status, String email, String studentId) {
+                String role, String status, String email, String studentId, String profileImageUrl) {
         this.userId = userId;
         this.departmentId = departmentId;
         this.courseId = courseId;
@@ -24,6 +25,7 @@ public class User {
         this.status = status;
         this.email = email;
         this.studentId = studentId;
+        this.profileImageUrl = profileImageUrl;
     }
 
     public int getUserId() { return userId; }
@@ -52,4 +54,7 @@ public class User {
 
     public String getStudentId() { return studentId; }
     public void setStudentId(String studentId) { this.studentId = studentId; }
+
+    public String getProfileImageUrl() { return profileImageUrl; }
+    public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
 }
