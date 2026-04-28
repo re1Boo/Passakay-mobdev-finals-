@@ -7,6 +7,13 @@ public class Shuttle {
     private String status; // "Deployed", "Standby", "Unavailable"
     private String driverName;
     private String driverId; // To track which driver is currently using this shuttle
+    private String tabletId;
+    private boolean active;
+
+    private double currentLat;
+    private double currentLng;
+    private int currentPassengers;
+    private String lastUpdated;
 
     public Shuttle() {}
 
@@ -16,6 +23,7 @@ public class Shuttle {
         this.status = "Standby";
         this.driverName = "No driver";
         this.driverId = "";
+        this.active = false;
     }
 
     public int getShuttleId() { return shuttleId; }
@@ -31,8 +39,30 @@ public class Shuttle {
     public void setStatus(String status) { this.status = status; }
 
     public String getDriverName() { return driverName; }
+
+    public String getTabletId() {return tabletId; }
+
+    public boolean isActive() {return active; }
     public void setDriverName(String driverName) { this.driverName = driverName; }
 
     public String getDriverId() { return driverId; }
     public void setDriverId(String driverId) { this.driverId = driverId; }
+
+
+    public void setTabletId(String tabletId) {this.tabletId = tabletId;}
+
+    public void setActive(boolean active) {this.active = active;}
+
+    public double getCurrentLat() { return currentLat; }
+    public void setCurrentLat(double currentLat) { this.currentLat = currentLat; }
+
+    public double getCurrentLng() { return currentLng; }
+    public void setCurrentLng(double currentLng) { this.currentLng = currentLng; }
+
+    public int getCurrentPassengers() { return currentPassengers; }
+    public void setCurrentPassengers(int currentPassengers) { this.currentPassengers = currentPassengers; }
+
+    public String getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(String lastUpdated) { this.lastUpdated = lastUpdated; }
+
 }
