@@ -1,67 +1,127 @@
 package com.usc.passakay;
 
-public class Shuttle {
-    private int shuttleId;
-    private int capacity;
-    private String plateNumber;
-    private String status = "Standby"; // Default value
-    private String driverName = "No driver"; // Default value
-    private String driverId = ""; // Default value
-    private boolean active;
-    private String currentDriverId;
-    private double currentLat;
-    private double currentLng;
-    private int currentPassengers;
-    private String lastUpdated;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.Toast;
 
-    public Shuttle() {}
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-    public Shuttle(int shuttleId, String plateNumber) {
-        this.shuttleId = shuttleId;
-        this.plateNumber = plateNumber;
-        this.status = "Standby";
-        this.driverName = "No driver";
-        this.driverId = "";
-        this.active = false;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class DriverDashboardActivity extends BaseActivity {
+
+    private RecyclerView recyclerShuttles;
+    private ShuttleAdapter shuttleAdapter;
+    private List<ShuttleItem> shuttleList = new ArrayList<>();
+    private DatabaseReference db;
+    private String currentUserId;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+        currentUserId = currentUser.getUid();
+
+        setContentView(R.layout.activity_driver_dashboard);
+        db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+
+        checkIfAlreadyDriving();
+
+        recyclerShuttles = findViewById(R.id.recyclerShuttles);
+        recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList);
+        recyclerShuttles.setAdapter(shuttleAdapter);
+
+        loadShuttles();
+        setupBottomNav();
     }
 
-    public int getShuttleId() { return shuttleId; }
-    public void setShuttleId(int shuttleId) { this.shuttleId = shuttleId; }
+    private void checkIfAlreadyDriving() {
+        db.child("shuttles").orderByChild("driverId").equalTo(currentUserId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            for (DataSnapshot child : snapshot.getChildren()) {
+                                Shuttle shuttle = child.getValue(Shuttle.class);
+                                if (shuttle != null && "Deployed".equals(shuttle.getStatus())) {
+                                    Intent intent = new Intent(DriverDashboardActivity.this, ShuttleStopActivity.class);
+                                    intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, "Bus " + shuttle.getShuttleId());
+                                    intent.putExtra("shuttleId", String.valueOf(shuttle.getShuttleId()));
+                                    startActivity(intent);
+                                    finish();
+                                    return;
+                                }
+                            }
+                        }
+                    }
 
-    public String getPlateNumber() { return plateNumber; }
-    public void setPlateNumber(String plateNumber) { this.plateNumber = plateNumber; }
-
-    public int getCapacity() { return capacity; }
-    public void setCapacity(int capacity){ this.capacity = capacity; }
-
-    public String getStatus() { 
-        return (status == null || status.isEmpty()) ? "Standby" : status; 
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
     }
-    public void setStatus(String status) { this.status = status; }
 
-    public String getDriverName() { 
-        return (driverName == null || driverName.isEmpty()) ? "No driver" : driverName; 
+    private void loadShuttles() {
+        db.child("shuttles").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                shuttleList.clear();
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    Shuttle shuttle = child.getValue(Shuttle.class);
+                    if (shuttle != null) {
+                        boolean isStandby = "Standby".equals(shuttle.getStatus());
+                        boolean isAvailable = !"Unavailable".equals(shuttle.getStatus());
+
+                        ShuttleItem item = new ShuttleItem(
+                                String.valueOf(shuttle.getShuttleId()),
+                                "Bus " + shuttle.getShuttleId(),
+                                shuttle.getDriverName(),
+                                shuttle.getPlateNumber(),
+                                0,
+                                isAvailable,
+                                isStandby,
+                                10.3541, 123.9115 // Default USC
+                        );
+                        shuttleList.add(item);
+                    }
+                }
+                shuttleAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
-    public void setDriverName(String driverName) { this.driverName = driverName; }
 
-    public String getDriverId() { return driverId; }
-    public void setDriverId(String driverId) { this.driverId = driverId; }
-
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
-
-    public String getCurrentDriverId() { return currentDriverId; }
-    public void setCurrentDriverId(String currentDriverId) { this.currentDriverId = currentDriverId; }
-
-    public double getCurrentLat() { return currentLat; }
-    public void setCurrentLat(double currentLat) { this.currentLat = currentLat; }
-
-    public double getCurrentLng() { return currentLng; }
-    public void setCurrentLng(double currentLng) { this.currentLng = currentLng; }
-
-    public int getCurrentPassengers() { return currentPassengers; }
-    public void setCurrentPassengers(int currentPassengers) { this.currentPassengers = currentPassengers; }
-
-    public String getLastUpdated() { return lastUpdated; }
-    public void setLastUpdated(String lastUpdated) { this.lastUpdated = lastUpdated; }
+    private void setupBottomNav() {
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+        bottomNav.setSelectedItemId(R.id.nav_home);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) return true;
+            if (id == R.id.nav_profile) {
+                startActivity(new Intent(this, ProfileActivity.class));
+                return true;
+            }
+            return false;
+        });
+    }
 }
