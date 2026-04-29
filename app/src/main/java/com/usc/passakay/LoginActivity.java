@@ -134,8 +134,12 @@ public class LoginActivity extends BaseActivity {
                             Intent intent;
                             switch (user.getRole()) {
                                 case "driver":
-                                    intent = new Intent(LoginActivity.this, DriverDashboardActivity.class);
+                                    intent = new Intent(LoginActivity.this, ShuttleStopActivity.class);
                                     break;
+
+                                case "bus":
+                                    autoDeployBus(user.getStudentId(),uid);
+                                    return;
                                 case "admin":
                                     intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
                                     break;
@@ -159,6 +163,34 @@ public class LoginActivity extends BaseActivity {
                         showError("Failed to get user data: " + error.getMessage());
                     }
                 });
+    }
+
+    private void autoDeployBus(String studentId, String uid) {
+
+        int shuttleId;
+
+        // SIMPLE HARD MAPPING
+        if ("BUS-1".equals(studentId)) {
+            shuttleId = 1;
+        } else if ("BUS-2".equals(studentId)) {
+            shuttleId = 2;
+        } else {
+            showError("Unknown bus account");
+            return;
+        }
+
+        // DEPLOY SHUTTLE
+        db.child("shuttles").child(String.valueOf(shuttleId)).child("active").setValue(true);
+        db.child("shuttles").child(String.valueOf(shuttleId)).child("status").setValue("Deployed");
+
+        // GO TO SHUTTLE SCREEN
+        Intent intent = new Intent(LoginActivity.this, ShuttleStopActivity.class);
+        intent.putExtra("shuttleId", shuttleId);
+        intent.putExtra("busUid", uid);
+
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private void showError(String message) {
