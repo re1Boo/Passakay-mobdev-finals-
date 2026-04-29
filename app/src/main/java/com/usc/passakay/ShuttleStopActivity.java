@@ -1,6 +1,7 @@
 package com.usc.passakay;
 
 import android.content.Intent;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
@@ -81,10 +82,14 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 for (DataSnapshot ds : stopSnapshot.getChildren()) {
                     ShuttleStop stop = ds.getValue(ShuttleStop.class);
                     if (stop != null) {
-                        // Using the placeholder distance (324m) as previously implemented by classmates
-                        stopList.add(new StopItem(stop.getStopName(), 0, 324));
+                        int distance = calculateDistance(driverLat, driverLng, stop.getLatitude(), stop.getLongitude());
+                        stopList.add(new StopItem(stop.getStopName(), 0, distance));
                     }
                 }
+
+                // Sort stops logically: Portal -> Dorm -> PE -> ... -> Bunzel
+                stopList.sort((s1, s2) -> Integer.compare(getRouteOrder(s1.getStopName()), getRouteOrder(s2.getStopName())));
+
                 // Step 2: Listen for Users and update the counts in stopList
                 loadWaitingCounts();
             }
@@ -92,8 +97,27 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         });
     }
 
-    // Removed real distance calculation to match classmate's placeholder version
-    // private int calculateDistance(double lat1, double lng1, double lat2, double lng2) { ... }
+    private int calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+        float[] results = new float[1];
+        Location.distanceBetween(lat1, lng1, lat2, lng2, results);
+        return (int) results[0];
+    }
+
+    private int getRouteOrder(String stopName) {
+        if (stopName == null) return 99;
+        String name = stopName.toLowerCase();
+        if (name.contains("bunzel")) return 1;
+        if (name.contains("portal")) return 2;
+        if (name.contains("dorm"))   return 3;
+        if (name.contains("pe"))     return 4;
+        if (name.contains("shcp"))   return 5;
+        if (name.contains("lrc"))    return 6;
+        if (name.contains("mr"))     return 7;
+        if (name.contains("safad"))  return 8;
+        if (name.contains("chapel")) return 9;
+        if (name.contains("among"))  return 10;
+        return 99;
+    }
 
     private void loadWaitingCounts() {
         db.child("users").addValueEventListener(new ValueEventListener() {

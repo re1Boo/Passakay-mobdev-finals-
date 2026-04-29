@@ -5,7 +5,7 @@ import android.widget.Button;
 
 import androidx.fragment.app.Fragment;
 import com.google.android.material.tabs.TabLayout;
-import androidx.viewpager2.widget.ViewPager2;
+    import androidx.viewpager2.widget.ViewPager2;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 

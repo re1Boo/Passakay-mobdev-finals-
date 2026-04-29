@@ -113,7 +113,7 @@ public class DataSeeder {
                 new ShuttleStop(1, "Bunzel",        10.351988679046595, 123.91350931757974),
                 new ShuttleStop(2, "Portal Terminal", 10.353133958676839, 123.91395314438697),
                 new ShuttleStop(3, "USC Dormitory",     10.354723899012651, 123.91212867070087),
-                new ShuttleStop(4, "PE Bulding",          10.355426033259947, 123.91097955144363),
+                new ShuttleStop(4, "PE Building",          10.355426033259947, 123.91097955144363),
                 new ShuttleStop(6, "SHCP Building",          10.355352813567361, 123.91040719449803),
                 new ShuttleStop(7, "LRC Building",          10.353962840499877, 123.9091986435636),
                 new ShuttleStop(8, "MR Building",          10.35344784070996, 123.90988370368238),
