@@ -3,6 +3,7 @@ package com.usc.passakay;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -34,6 +35,7 @@ public class PassengerHomeActivity extends BaseActivity {
     private List<ShuttleItem> shuttleList = new ArrayList<>();
     private DatabaseReference db;
     private MaterialButton btnWaitingStatus;
+    private TextView tvAnnouncement;
     private boolean isWaiting = false;
 
     @Override
@@ -45,6 +47,7 @@ public class PassengerHomeActivity extends BaseActivity {
 
         // UI Elements
         btnWaitingStatus = findViewById(R.id.btnWaitingStatus);
+        tvAnnouncement = findViewById(R.id.tvAnnouncement);
         FloatingActionButton fabScanQR = findViewById(R.id.fabScanQR);
 
         // Setup RecyclerView
@@ -60,6 +63,12 @@ public class PassengerHomeActivity extends BaseActivity {
 
         // QR Scan FAB
         fabScanQR.setOnClickListener(v -> startQRScanner());
+
+        // Load Announcements
+        loadAnnouncements();
+
+        // Click on announcement to see history
+        findViewById(R.id.cardAnnouncement).setOnClickListener(v -> showAnnouncementHistory());
 
         // Load all shuttles
         loadShuttles();
@@ -143,6 +152,111 @@ public class PassengerHomeActivity extends BaseActivity {
     private void updateWaitingStatusInDB(boolean waiting) {
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         db.child("users").child(uid).child("isWaiting").setValue(waiting);
+    }
+
+    private void loadAnnouncements() {
+        db.child("announcements").child("current").addValueEventListener(new ValueEventListener() {
+            private String lastMessage = "";
+
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    String message = snapshot.child("message").getValue(String.class);
+                    String priority = snapshot.child("priority").getValue(String.class);
+                    Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
+
+                    // Check for expiry
+                    if (expiresAt != null && System.currentTimeMillis() > expiresAt) {
+                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                        return;
+                    }
+
+                    // Vibrate if it's a new message
+                    if (message != null && !message.equals(lastMessage)) {
+                        android.os.Vibrator v = (android.os.Vibrator) getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                        if (v != null) v.vibrate(300);
+                        lastMessage = message;
+                    }
+
+                    tvAnnouncement.setText(message);
+                    tvAnnouncement.setSelected(true);
+                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.VISIBLE);
+
+                    // Show "NEW" badge if less than 2 minutes old
+                    long currentTimestamp = snapshot.child("timestamp").getValue(Long.class) != null ? snapshot.child("timestamp").getValue(Long.class) : 0;
+                    if (currentTimestamp > 0 && (System.currentTimeMillis() - currentTimestamp) < (2 * 60 * 1000)) {
+                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.VISIBLE);
+                    } else {
+                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.GONE);
+                    }
+
+                    // Show relative time in the banner
+                    if (currentTimestamp > 0) {
+                        TextView tvTime = findViewById(R.id.tvAnnouncementTime);
+                        tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(currentTimestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
+                    }
+
+                    // Show relative time in the banner
+                    Long timestamp = snapshot.child("timestamp").getValue(Long.class);
+                    if (timestamp != null) {
+                        TextView tvTime = findViewById(R.id.tvAnnouncementTime);
+                        tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(timestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
+                    }
+
+                    // Change color based on priority
+                    androidx.cardview.widget.CardView card = findViewById(R.id.cardAnnouncement);
+                    if ("warning".equals(priority)) {
+                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2")); // Orange tint
+                    } else if ("emergency".equals(priority)) {
+                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2")); // Red tint
+                        
+                        // Suggestion: Pulsing Animation for Emergency
+                        android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
+                        pulse.setDuration(800);
+                        pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
+                        pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
+                        card.startAnimation(pulse);
+                    } else {
+                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4")); // Yellow tint
+                        card.clearAnimation();
+                    }
+                } else {
+                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {}
+        });
+    }
+
+    private void showAnnouncementHistory() {
+        db.child("announcements").child("history").limitToLast(10).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (!snapshot.exists()) return;
+
+                java.util.List<java.util.Map<String, Object>> historyData = new java.util.ArrayList<>();
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    java.util.Map<String, Object> map = (java.util.Map<String, Object>) ds.getValue();
+                    if (map != null) historyData.add(0, map); // Latest first
+                }
+
+                AnnouncementHistoryAdapter adapter = new AnnouncementHistoryAdapter(PassengerHomeActivity.this, historyData, null);
+                
+                RecyclerView rv = new RecyclerView(PassengerHomeActivity.this);
+                rv.setLayoutManager(new LinearLayoutManager(PassengerHomeActivity.this));
+                rv.setAdapter(adapter);
+                rv.setPadding(20, 20, 20, 20);
+
+                android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(PassengerHomeActivity.this);
+                builder.setTitle("Recent Announcements");
+                builder.setView(rv);
+                builder.setPositiveButton("Close", null);
+                builder.show();
+            }
+            @Override public void onCancelled(DatabaseError error) {}
+        });
     }
 
     private void loadShuttles() {

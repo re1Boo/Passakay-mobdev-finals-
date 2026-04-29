@@ -2,6 +2,7 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -27,6 +28,7 @@ public class DriverDashboardActivity extends BaseActivity {
     private List<ShuttleItem> shuttleList = new ArrayList<>();
     private DatabaseReference db;
     private String currentUserId;
+    private TextView tvAnnouncement;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +45,7 @@ public class DriverDashboardActivity extends BaseActivity {
         setContentView(R.layout.activity_driver_dashboard);
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
+        tvAnnouncement = findViewById(R.id.tvAnnouncement);
         checkIfAlreadyDriving();
 
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
@@ -52,7 +55,95 @@ public class DriverDashboardActivity extends BaseActivity {
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         loadShuttles();
+        loadAnnouncements();
+        
+        findViewById(R.id.cardAnnouncement).setOnClickListener(v -> showAnnouncementHistory());
+        
         setupBottomNav();
+    }
+
+    private void showAnnouncementHistory() {
+        db.child("announcements").child("history").limitToLast(10).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) return;
+                java.util.List<java.util.Map<String, Object>> historyData = new java.util.ArrayList<>();
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    java.util.Map<String, Object> map = (java.util.Map<String, Object>) ds.getValue();
+                    if (map != null) historyData.add(0, map);
+                }
+                AnnouncementHistoryAdapter adapter = new AnnouncementHistoryAdapter(DriverDashboardActivity.this, historyData, null);
+                
+                RecyclerView rv = new RecyclerView(DriverDashboardActivity.this);
+                rv.setLayoutManager(new LinearLayoutManager(DriverDashboardActivity.this));
+                rv.setAdapter(adapter);
+                rv.setPadding(20, 20, 20, 20);
+
+                new android.app.AlertDialog.Builder(DriverDashboardActivity.this)
+                        .setTitle("Recent Announcements")
+                        .setView(rv)
+                        .setPositiveButton("Close", null)
+                        .show();
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
+    private void loadAnnouncements() {
+        db.child("announcements").child("current").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    String message = snapshot.child("message").getValue(String.class);
+                    String priority = snapshot.child("priority").getValue(String.class);
+                    Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
+
+                    // Check for expiry
+                    if (expiresAt != null && System.currentTimeMillis() > expiresAt) {
+                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                        return;
+                    }
+
+                    tvAnnouncement.setText(message);
+                    tvAnnouncement.setSelected(true);
+                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.VISIBLE);
+
+                    // Show "NEW" badge if less than 2 minutes old
+                    long currentTimestamp = snapshot.child("timestamp").getValue(Long.class) != null ? snapshot.child("timestamp").getValue(Long.class) : 0;
+                    if (currentTimestamp > 0 && (System.currentTimeMillis() - currentTimestamp) < (2 * 60 * 1000)) {
+                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.VISIBLE);
+                    } else {
+                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.GONE);
+                    }
+
+                    // Show relative time in the banner
+                    if (currentTimestamp > 0) {
+                        TextView tvTime = findViewById(R.id.tvAnnouncementTime);
+                        tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(currentTimestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
+                    }
+
+                    // Change color based on priority
+                    androidx.cardview.widget.CardView card = findViewById(R.id.cardAnnouncement);
+                    if ("warning".equals(priority)) {
+                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2"));
+                    } else if ("emergency".equals(priority)) {
+                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2"));
+                        
+                        android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
+                        pulse.setDuration(800);
+                        pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
+                        pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
+                        card.startAnimation(pulse);
+                    } else {
+                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4"));
+                        card.clearAnimation();
+                    }
+                } else {
+                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                }
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
 
     private void checkIfAlreadyDriving() {

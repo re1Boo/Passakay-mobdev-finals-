@@ -32,6 +32,12 @@ public class AdminDashboardActivity extends BaseActivity {
         AdminPagerAdapter adapter = new AdminPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
+        // Add Tabs programmatically to ensure they exist
+        tabLayout.addTab(tabLayout.newTab().setText("Users"));
+        tabLayout.addTab(tabLayout.newTab().setText("Drivers"));
+        tabLayout.addTab(tabLayout.newTab().setText("Bookings"));
+        tabLayout.addTab(tabLayout.newTab().setText("Announce"));
+
         // Link TabLayout with ViewPager
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
@@ -45,7 +51,9 @@ public class AdminDashboardActivity extends BaseActivity {
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
-                tabLayout.selectTab(tabLayout.getTabAt(position));
+                if (tabLayout.getTabAt(position) != null) {
+                    tabLayout.selectTab(tabLayout.getTabAt(position));
+                }
             }
         });
     }
@@ -60,11 +68,12 @@ public class AdminDashboardActivity extends BaseActivity {
                 case 0: return new AdminUsersFragment();
                 case 1: return new AdminDriversFragment();
                 case 2: return new AdminBookingFragment();
+                case 3: return new AdminAnnouncementsFragment();
                 default: return new AdminUsersFragment();
             }
         }
 
         @Override
-        public int getItemCount() { return 3; }
+        public int getItemCount() { return 4; }
     }
 }

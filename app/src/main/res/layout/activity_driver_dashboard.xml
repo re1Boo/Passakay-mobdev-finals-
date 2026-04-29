@@ -32,6 +32,75 @@
         app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintStart_toStartOf="parent"/>
 
+    <!-- Announcement Bar for Drivers -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardAnnouncement"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="29dp"
+        android:layout_marginEnd="29dp"
+        android:layout_marginTop="8dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="#FFF9C4"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@android:drawable/ic_dialog_info"
+                android:layout_marginEnd="8dp"
+                app:tint="#FBC02D"
+                android:contentDescription="Info icon"/>
+
+            <TextView
+                android:id="@+id/tvNewBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NEW"
+                android:textColor="#FFFFFF"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:background="@android:color/holo_red_dark"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:layout_marginEnd="6dp"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvAnnouncement"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Shuttle operation is normal."
+                android:textColor="#5D4037"
+                android:textSize="12sp"
+                android:fontFamily="@font/kanit"
+                android:ellipsize="marquee"
+                android:singleLine="true"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:scrollHorizontally="true"/>
+
+            <TextView
+                android:id="@+id/tvAnnouncementTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Just now"
+                android:textColor="#8D6E63"
+                android:textSize="10sp"
+                android:fontFamily="@font/kanit"
+                android:layout_marginStart="8dp"/>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
     <!-- Shuttle List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerShuttles"
@@ -42,7 +111,7 @@
         android:layout_marginTop="12dp"
         android:paddingBottom="8dp"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        app:layout_constraintTop_toBottomOf="@id/cardAnnouncement"
         app:layout_constraintBottom_toTopOf="@id/bottom_nav"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
