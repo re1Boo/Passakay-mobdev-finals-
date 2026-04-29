@@ -68,14 +68,14 @@ public class MainActivity extends BaseActivity {
                     if (shuttle != null) {
                         // Create ShuttleItem with sample ETA and location
                         ShuttleItem item = new ShuttleItem(
-                            String.valueOf(shuttle.getShuttleId()),
-                            "Bus " + shuttle.getShuttleId(),
-                            "John Doe",           // Placeholder
-                            shuttle.getPlateNumber(),
-                            (int)(Math.random() * 15) + 1, // Placeholder
-                            true,                 // Placeholder
-                            10.3535,              // Placeholder
-                            123.9109
+                                String.valueOf(shuttle.getShuttleId()),
+                                "Bus " + shuttle.getShuttleId(),
+                                "John Doe",           // Placeholder
+                                shuttle.getPlateNumber(),
+                                (int)(Math.random() * 15) + 1, // Placeholder
+                                true,                 // Placeholder
+                                10.3535,              // Placeholder
+                                123.9109
                         );
                         shuttleList.add(item);
                     }
@@ -83,13 +83,13 @@ public class MainActivity extends BaseActivity {
 
                 // Add unavailable shuttle example
                 ShuttleItem unavailable = new ShuttleItem(
-                    "unavailable",
-                    "Bus " + (shuttleList.size() + 1),
-                    "Unavailable",
-                    "DEF 9012",
-                    0,
-                    false,
-                    0, 0
+                        "unavailable",
+                        "Bus " + (shuttleList.size() + 1),
+                        "Unavailable",
+                        "DEF 9012",
+                        0,
+                        false,
+                        0, 0
                 );
                 shuttleList.add(unavailable);
 
