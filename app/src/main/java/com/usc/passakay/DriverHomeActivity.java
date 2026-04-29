@@ -33,7 +33,7 @@ public class DriverHomeActivity extends BaseActivity {
     private MaterialButton btnEndTrip;
     private LinearLayout layoutSelection, layoutActiveTrip;
     private TextView tvActiveBus;
-    
+
     private DatabaseReference db;
     private String currentUserId;
     private List<ShuttleItem> shuttleList = new ArrayList<>();
@@ -50,11 +50,9 @@ public class DriverHomeActivity extends BaseActivity {
         // Initialize UI
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
-        
-        // Fixed: Pass getSupportFragmentManager() as the third argument
-//        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
-          shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
 
+        // Fixed: Pass getSupportFragmentManager() as the third argument
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         btnEndTrip = findViewById(R.id.btnEndTrip);
@@ -70,7 +68,7 @@ public class DriverHomeActivity extends BaseActivity {
 
         // 3. Handle End Trip
         btnEndTrip.setOnClickListener(v -> endTrip());
-        
+
         checkIfAlreadyDriving();
     }
 
