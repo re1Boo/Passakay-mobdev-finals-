@@ -13,8 +13,7 @@ public class DataSeeder {
     private static final String TAG = "DataSeeder";
 
     public DataSeeder() {
-        // Explicitly using the database URL from your google-services.json
-        db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+        db    = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
         mAuth = FirebaseAuth.getInstance();
     }
 
@@ -97,29 +96,29 @@ public class DataSeeder {
     }
 
     private void seedShuttles() {
-        Shuttle[] shuttles = {
-                new Shuttle(1, "ABC 1234"),
-                new Shuttle(2, "XYZ 5678")
-        };
-        for (Shuttle shuttle : shuttles) {
-            db.child("shuttles").child(String.valueOf(shuttle.getShuttleId())).setValue(shuttle)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Shuttle seeded: " + shuttle.getPlateNumber()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Shuttle seed failed: " + e.getMessage()));
-        }
+
+        Shuttle shuttle1 = new Shuttle(1, "ABC 1234");
+        Shuttle shuttle2 = new Shuttle(2, "XYZ 5678");
+
+        db.child("shuttles").child("1").setValue(shuttle1)
+                .addOnSuccessListener(a -> Log.d(TAG, "Shuttle 1 seeded"));
+
+        db.child("shuttles").child("2").setValue(shuttle2)
+                .addOnSuccessListener(a -> Log.d(TAG, "Shuttle 2 seeded"));
     }
 
     private void seedShuttleStops() {
         ShuttleStop[] stops = {
-                new ShuttleStop(1, "Bunzel",        10.351988679046595, 123.91350931757974),
-                new ShuttleStop(2, "Portal Terminal", 10.353133958676839, 123.91395314438697),
-                new ShuttleStop(3, "USC Dormitory",     10.354723899012651, 123.91212867070087),
-                new ShuttleStop(4, "PE Bulding",          10.355426033259947, 123.91097955144363),
-                new ShuttleStop(6, "SHCP Building",          10.355352813567361, 123.91040719449803),
-                new ShuttleStop(7, "LRC Building",          10.353962840499877, 123.9091986435636),
-                new ShuttleStop(8, "MR Building",          10.35344784070996, 123.90988370368238),
-                new ShuttleStop(9, "SAFAD Building",          10.352892209800075, 123.91050896252874),
+                new ShuttleStop(1,  "Bunzel",          10.351988679046595, 123.91350931757974),
+                new ShuttleStop(2,  "Portal Terminal", 10.353133958676839, 123.91395314438697),
+                new ShuttleStop(3,  "USC Dormitory",   10.354723899012651, 123.91212867070087),
+                new ShuttleStop(4,  "PE Building",     10.355426033259947, 123.91097955144363),
+                new ShuttleStop(6,  "SHCP Building",   10.355352813567361, 123.91040719449803),
+                new ShuttleStop(7,  "LRC Building",    10.353962840499877, 123.9091986435636),
+                new ShuttleStop(8,  "MR Building",     10.35344784070996,  123.90988370368238),
+                new ShuttleStop(9,  "SAFAD Building",  10.352892209800075, 123.91050896252874),
                 new ShuttleStop(10, "Chapel",          10.352712231386858, 123.91142525690631),
-                new ShuttleStop(11, "AMONG BALAY",          10.352712231386858, 123.91142525690631),
+                new ShuttleStop(11, "AMONG BALAY",     10.352712231386858, 123.91142525690631),
         };
         for (ShuttleStop stop : stops) {
             db.child("shuttleStops").child(String.valueOf(stop.getStopId())).setValue(stop)
@@ -129,10 +128,19 @@ public class DataSeeder {
     }
 
     private void seedUsers() {
-        createUser("driver@passakay.com", "password123", "20000001", "driver");
-        createUser("passenger@passakay.com", "password123", "21101234", "passenger");
-        // Admin user
-        createUser("admin@passakay.com", "admin123456", "00000001", "admin");
+        // Regular users
+        createUser("driver@passakay.com",    "password123",  "20000001", "driver");
+        createUser("passenger@passakay.com", "password123",  "21101234", "passenger");
+        createUser("admin@passakay.com",     "admin123456",  "00000001", "admin");
+
+        // Tablet accounts — one static account per bus
+        // These never change. The tabletId in Shuttle matches the studentId here.
+        createUser("bus1@passakay.com", "buspassword1", "BUS-1", "bus");
+        createUser("bus2@passakay.com", "buspassword2", "BUS-2", "bus");
+
+        //DO NOT MIND
+//        createTabletUser("tablet_bus1@passakay.com", "tablet123", "tablet_bus1", 1);
+//        createTabletUser("tablet_bus2@passakay.com", "tablet123", "tablet_bus2", 2);
     }
 
     private void createUser(String email, String password, String studentId, String role) {
@@ -143,18 +151,49 @@ public class DataSeeder {
                 })
                 .addOnFailureListener(e -> {
                     if (e instanceof FirebaseAuthUserCollisionException) {
-                        Log.d(TAG, "User already exists in Auth: " + email + ". Updating database data...");
+                        Log.d(TAG, "User already exists: " + email);
                         mAuth.signInWithEmailAndPassword(email, password)
-                                .addOnSuccessListener(authResult -> {
-                                    saveUserData(authResult.getUser().getUid(), email, studentId, role);
-                                })
-                                .addOnFailureListener(err -> Log.e(TAG, "Sign in failed for " + email + ": " + err.getMessage()));
+                                .addOnSuccessListener(authResult ->
+                                        saveUserData(authResult.getUser().getUid(), email, studentId, role))
+                                .addOnFailureListener(err ->
+                                        Log.e(TAG, "Sign in failed for " + email + ": " + err.getMessage()));
                     } else {
                         Log.e(TAG, "Failed to create user " + email + ": " + e.getMessage());
-                        Log.e(TAG, "Check if SHA-1 is added to Firebase and reCAPTCHA enforcement is configured.");
                     }
                 });
     }
+
+    // Tablet accounts have role="tablet" and a shuttleId linking them to a bus
+    // DO NOT USE
+//    private void createTabletUser(String email, String password, String tabletId, int shuttleId) {
+//        mAuth.createUserWithEmailAndPassword(email, password)
+//                .addOnSuccessListener(authResult -> {
+//                    String uid = authResult.getUser().getUid();
+//
+//                    User user = new User();
+//                    user.setEmail(email);
+//                    user.setStudentId(tabletId);
+//                    user.setRole("bus");
+//                    user.setStatus("active");
+//                    user.setDepartmentId(0);
+//                    user.setCourseId(0);
+//
+//                    db.child("users").child(uid).setValue(user)
+//                            .addOnSuccessListener(a ->
+//                                    Log.d(TAG, "Tablet user saved: " + email))
+//                            .addOnFailureListener(err ->
+//                                    Log.e(TAG, "Failed to save tablet user: " + err.getMessage()));
+//                })
+//                .addOnFailureListener(e -> {
+//                    if (e instanceof FirebaseAuthUserCollisionException) {
+//                        mAuth.signInWithEmailAndPassword(email, password)
+//                                .addOnSuccessListener(authResult -> {
+//                                    String uid = authResult.getUser().getUid();
+//                                    Log.d(TAG, "Tablet user exists: " + email);
+//                                });
+//                    }
+//                });
+//    }
 
     private void saveUserData(String uid, String email, String studentId, String role) {
         User user = new User();
@@ -166,7 +205,7 @@ public class DataSeeder {
         user.setCourseId(1);
 
         db.child("users").child(uid).setValue(user)
-                .addOnSuccessListener(a -> Log.d(TAG, "User data saved to DB: " + email))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to save user data to DB: " + e.getMessage()));
+                .addOnSuccessListener(a -> Log.d(TAG, "User saved: " + email))
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to save user: " + e.getMessage()));
     }
 }
