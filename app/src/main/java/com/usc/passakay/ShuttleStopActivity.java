@@ -78,7 +78,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
 
     private void stopDriving() {
         if (shuttleId == null) return;
-        
+
         DatabaseReference shuttleRef = db.child("shuttles").child(shuttleId);
         shuttleRef.child("status").setValue("Standby");
         shuttleRef.child("driverId").setValue("");
