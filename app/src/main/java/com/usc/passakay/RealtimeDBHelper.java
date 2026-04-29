@@ -19,7 +19,7 @@ public class RealtimeDBHelper {
     private static final String TAG = "RealtimeDBHelper";
 
     public RealtimeDBHelper() {
-        // Ensure this URL matches your Firebase Console exactly
+        // Using the explicit URL to ensure it points to the correct region
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
     }
 
@@ -251,11 +251,17 @@ public class RealtimeDBHelper {
             onFailure.accept("QR Content is null");
             return;
         }
-        
+
         String content = qrContent.trim();
         DatabaseReference locationRef;
-        
-        if (content.equals("SAFAD.com") || content.equals("SAS.com") || content.equals("BUNZEL.com")) {
+
+        if (content.equals("SAFAD.com") ||
+                content.equals("SAS.com") ||
+                content.equals("BUNZEL.com") ||
+                content.equals("SMED.com") ||
+                content.equals("LRC.com") ||
+                content.equals("REGISTRAR.com") ||
+                content.equals("MRHALL.com")) {
             locationRef = db.child("scans").child(content.replace(".", "_"));
         } else {
             locationRef = db.child("scans").child("OTHER");

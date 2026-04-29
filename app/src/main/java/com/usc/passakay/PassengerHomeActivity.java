@@ -97,12 +97,12 @@ public class PassengerHomeActivity extends BaseActivity {
     private void handleQRResult(String contents) {
         // Assume the QR code contains the stop ID or name
         Toast.makeText(this, "Scanned: " + contents, Toast.LENGTH_LONG).show();
-
+        
         // Example: Auto-toggle waiting status if they scan a stop
         if (!isWaiting) {
             toggleWaitingStatus();
         }
-
+        
         // You could also log this to the database
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         db.child("users").child(uid).child("lastScannedStop").setValue(contents);
@@ -145,19 +145,19 @@ public class PassengerHomeActivity extends BaseActivity {
                         double lng = (shuttle.getCurrentLng() != 0) ? shuttle.getCurrentLng() : USC_LNG;
 
                         ShuttleItem item = new ShuttleItem(
-                                String.valueOf(shuttle.getShuttleId()),
-                                "Bus " + shuttle.getShuttleId(),
-                                shuttle.getDriverName() != null ? shuttle.getDriverName() : "No Driver",
-                                shuttle.getPlateNumber(),
-                                shuttle.isActive() ? calculateETA(lat, lng) : 0,
-                                shuttle.isActive(),
-                                lat,
-                                lng
+                            String.valueOf(shuttle.getShuttleId()),
+                            "Bus " + shuttle.getShuttleId(),
+                            shuttle.getDriverName() != null ? shuttle.getDriverName() : "No Driver",
+                            shuttle.getPlateNumber(),
+                            shuttle.isActive() ? calculateETA(lat, lng) : 0,
+                            shuttle.isActive(),
+                            lat,
+                            lng
                         );
                         item.setCurrentPassengers(shuttle.getCurrentPassengers());
                         item.setCapacity(shuttle.getCapacity() > 0 ? shuttle.getCapacity() : 30);
                         item.setLastUpdated(shuttle.getLastUpdated() != null ? shuttle.getLastUpdated() : "Offline");
-
+                        
                         shuttleList.add(item);
                     }
                 }

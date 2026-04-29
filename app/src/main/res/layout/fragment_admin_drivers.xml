@@ -8,24 +8,17 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Driver Management"
-        android:textSize="20sp"
+        android:text="Shuttle Management"
+        android:textSize="22sp"
         android:textStyle="bold"
-        android:layout_marginBottom="16dp"/>
-
-    <Button
-        android:id="@+id/btnAddDriver"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Add Driver"
-        android:layout_gravity="end"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="24dp"
+        android:textColor="@color/black"/>
 
     <ListView
-        android:id="@+id/listDrivers"
+        android:id="@+id/listShuttles"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:divider="@android:color/darker_gray"
-        android:dividerHeight="1dp"/>
+        android:divider="@android:color/transparent"
+        android:dividerHeight="8dp"/>
 
 </LinearLayout>
