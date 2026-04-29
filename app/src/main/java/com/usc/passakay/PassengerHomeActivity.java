@@ -52,7 +52,7 @@ public class PassengerHomeActivity extends BaseActivity {
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
 
         // ✅ Pass getSupportFragmentManager() so maps can load
-        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList);
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         // Waiting Status Toggle
