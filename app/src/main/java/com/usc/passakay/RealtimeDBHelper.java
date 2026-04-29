@@ -97,7 +97,6 @@ public class RealtimeDBHelper {
     }
 
     // ─── COURSE ─────────────────────────────────────────
-
     public void addCourse(Course course, Runnable onSuccess, Consumer<String> onFailure) {
         db.child("courses").child(String.valueOf(course.getCourseId())).setValue(course)
                 .addOnSuccessListener(a -> onSuccess.run())
