@@ -47,8 +47,7 @@ public class DriverDashboardActivity extends BaseActivity {
 
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
-        // Fixed: Pass getSupportFragmentManager() to match the ShuttleAdapter constructor
-        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList);
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         loadShuttles();
@@ -90,7 +89,7 @@ public class DriverDashboardActivity extends BaseActivity {
                     if (shuttle != null) {
                         boolean isStandby = "Standby".equals(shuttle.getStatus());
                         boolean isAvailable = !"Unavailable".equals(shuttle.getStatus());
-                        
+
                         ShuttleItem item = new ShuttleItem(
                                 String.valueOf(shuttle.getShuttleId()),
                                 "Bus " + shuttle.getShuttleId(),
