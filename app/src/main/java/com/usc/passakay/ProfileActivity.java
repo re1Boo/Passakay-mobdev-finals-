@@ -27,6 +27,7 @@ public class ProfileActivity extends BaseActivity {
     private DatabaseReference db;
     private boolean isPasswordVisible = false;
     private String userRole = "";
+    private String userStudentId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +85,7 @@ public class ProfileActivity extends BaseActivity {
                     User user = snapshot.getValue(User.class);
                     if (user != null) {
                         userRole = user.getRole();
+                        userStudentId = user.getStudentId();
                         tvFullName.setText(user.getFirstName() + " " + user.getLastName());
                         tvRole.setText(capitalize(user.getRole()));
                         tvStudentId.setText("ID Number: " + user.getStudentId());
@@ -171,8 +173,11 @@ public class ProfileActivity extends BaseActivity {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 Intent intent;
-                if ("driver".equals(userRole)) {
-                    intent = new Intent(this, DriverDashboardActivity.class);
+                if ("driver".equals(userRole) || "bus".equals(userRole)) {
+                    int shuttleId = "BUS-2".equals(userStudentId) ? 2 : 1;
+                    intent = new Intent(this, ShuttleStopActivity.class);
+                    intent.putExtra("shuttleId", String.valueOf(shuttleId));
+                    intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, "Bus " + shuttleId);
                 } else if ("admin".equals(userRole)) {
                     intent = new Intent(this, AdminDashboardActivity.class);
                 } else {
