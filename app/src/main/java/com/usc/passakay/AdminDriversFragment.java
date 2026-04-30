@@ -156,8 +156,22 @@ public class AdminDriversFragment extends Fragment {
     }
 
     private void updateShuttleDriver(int shuttleId, String driverId, String driverName) {
-        db.child("shuttles").child(String.valueOf(shuttleId)).child("driverId").setValue(driverId);
-        db.child("shuttles").child(String.valueOf(shuttleId)).child("driverName").setValue(driverName)
-                .addOnSuccessListener(a -> Toast.makeText(getContext(), "Driver assigned to Shuttle " + shuttleId, Toast.LENGTH_SHORT).show());
+        DatabaseReference shuttleRef = db.child("shuttles").child(String.valueOf(shuttleId));
+
+        // Determine status and active state based on whether a driver is assigned
+        boolean isActive = !driverId.isEmpty();
+        String status = isActive ? "Deployed" : "Standby";
+
+        // Update all relevant fields to match the required Firebase structure
+        shuttleRef.child("driverId").setValue(driverId);
+        shuttleRef.child("driverName").setValue(driverName);
+        shuttleRef.child("active").setValue(isActive);
+        shuttleRef.child("status").setValue(status)
+                .addOnSuccessListener(a -> {
+                    if (getContext() != null) {
+                        String msg = isActive ? "Driver assigned to Shuttle " : "Driver removed from Shuttle ";
+                        Toast.makeText(getContext(), msg + shuttleId, Toast.LENGTH_SHORT).show();
+                    }
+                });
+        }
     }
-}

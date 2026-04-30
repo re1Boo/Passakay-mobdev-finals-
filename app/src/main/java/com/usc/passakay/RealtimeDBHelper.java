@@ -250,11 +250,14 @@ public class RealtimeDBHelper {
             onFailure.accept("QR Content is null");
             return;
         }
-        
+
         String content = qrContent.trim();
         DatabaseReference locationRef;
-        
-        if (content.equals("SAFAD.com") || content.equals("SAS.com") || content.equals("BUNZEL.com")) {
+
+        if (content.equals("SAFAD Building.com")
+                || content.equals("PE Building.com")
+                || content.equals("Bunzel.com")
+                || content.equals("MR Building.com")){
             locationRef = db.child("scans").child(content.replace(".", "_"));
         } else {
             locationRef = db.child("scans").child("OTHER");

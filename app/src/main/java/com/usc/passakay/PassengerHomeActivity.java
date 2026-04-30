@@ -69,14 +69,9 @@ public class PassengerHomeActivity extends BaseActivity {
     }
 
     private void startQRScanner() {
-        IntentIntegrator integrator = new IntentIntegrator(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt("Scan a shuttle stop QR code");
-        integrator.setCameraId(0);  // Use a specific camera of the device
-        integrator.setBeepEnabled(true);
-        integrator.setBarcodeImageEnabled(true);
-        integrator.setOrientationLocked(false);
-        integrator.initiateScan();
+        // We are now launching the custom ScannerActivity instead of ZXing
+        Intent intent = new Intent(this, ScannerActivity.class);
+        startActivity(intent);
     }
 
     @Override
