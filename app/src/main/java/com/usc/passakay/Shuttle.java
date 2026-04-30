@@ -7,7 +7,7 @@ public class Shuttle {
     private String status; // "Deployed", "Standby", "Unavailable"
     private String driverName;
     private String driverId; // To track which driver is currently using this shuttle
-    private String tabletId;
+    private String deviceId; // Unique ID of the physical phone assigned to this shuttle
     private boolean active;
 
     private double currentLat;
@@ -24,6 +24,7 @@ public class Shuttle {
         this.driverName = "No driver";
         this.driverId = "";
         this.active = false;
+        this.deviceId = "";
     }
 
     public int getShuttleId() { return shuttleId; }
@@ -40,7 +41,7 @@ public class Shuttle {
 
     public String getDriverName() { return driverName; }
 
-    public String getTabletId() {return tabletId; }
+    public String getDeviceId() {return deviceId; }
 
     public boolean isActive() {return active; }
     public void setDriverName(String driverName) { this.driverName = driverName; }
@@ -49,7 +50,7 @@ public class Shuttle {
     public void setDriverId(String driverId) { this.driverId = driverId; }
 
 
-    public void setTabletId(String tabletId) {this.tabletId = tabletId;}
+    public void setDeviceId(String deviceId) {this.deviceId = deviceId;}
 
     public void setActive(boolean active) {this.active = active;}
 

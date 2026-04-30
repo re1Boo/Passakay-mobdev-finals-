@@ -1,6 +1,7 @@
 package com.usc.passakay;
 
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +10,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -31,23 +33,18 @@ public class AdminDriversFragment extends Fragment {
     private List<String> driverNames = new ArrayList<>();
     private List<String> driverIds = new ArrayList<>();
     private List<Shuttle> shuttleList = new ArrayList<>();
-    private ShuttleAdapter adminShuttleAdapter;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_admin_drivers, container, false);
-
         listView = view.findViewById(R.id.listShuttles);
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
-        // Initialize 5 shuttles if they don't exist, or just load them
         loadDriversAndShuttles();
-
         return view;
     }
 
     private void loadDriversAndShuttles() {
-        // First, load all available drivers
         db.child("users").orderByChild("role").equalTo("driver")
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -55,7 +52,6 @@ public class AdminDriversFragment extends Fragment {
                         allDrivers.clear();
                         driverNames.clear();
                         driverIds.clear();
-
                         driverNames.add("No Driver");
                         driverIds.add("");
 
@@ -69,7 +65,6 @@ public class AdminDriversFragment extends Fragment {
                         }
                         loadShuttles();
                     }
-
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {}
                 });
@@ -80,13 +75,11 @@ public class AdminDriversFragment extends Fragment {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 shuttleList.clear();
-                // Ensure we have 5 shuttles
                 for (int i = 1; i <= 5; i++) {
                     DataSnapshot shuttleSnap = snapshot.child(String.valueOf(i));
                     if (shuttleSnap.exists()) {
                         shuttleList.add(shuttleSnap.getValue(Shuttle.class));
                     } else {
-                        // Create a default shuttle if it doesn't exist
                         Shuttle newShuttle = new Shuttle(i, "GWX-10" + i);
                         db.child("shuttles").child(String.valueOf(i)).setValue(newShuttle);
                         shuttleList.add(newShuttle);
@@ -94,7 +87,6 @@ public class AdminDriversFragment extends Fragment {
                 }
                 setupListView();
             }
-
             @Override
             public void onCancelled(@NonNull DatabaseError error) {}
         });
@@ -116,35 +108,40 @@ public class AdminDriversFragment extends Fragment {
                 TextView tvName = convertView.findViewById(R.id.tvShuttleName);
                 TextView tvPlate = convertView.findViewById(R.id.tvPlateNumber);
                 Spinner spinnerDrivers = convertView.findViewById(R.id.spinnerDrivers);
-
+                Button btnBind = convertView.findViewById(R.id.btnBindDevice);
+                
+                String deviceId = shuttle.getDeviceId();
+                boolean isBound = deviceId != null && !deviceId.isEmpty();
+                
                 tvName.setText("Shuttle " + shuttle.getShuttleId());
-                tvPlate.setText("Plate Number: " + shuttle.getPlateNumber());
+                tvPlate.setText("Plate: " + shuttle.getPlateNumber() + (isBound ? " (Bound)" : " (Unbound)"));
+
+                // Bind Device Button Logic
+                btnBind.setText(isBound ? "Unbind Phone" : "Bind This Phone");
+                btnBind.setOnClickListener(v -> {
+                    if (isBound) {
+                        clearDeviceBinding(shuttle.getShuttleId());
+                    } else {
+                        bindCurrentDevice(shuttle.getShuttleId());
+                    }
+                });
 
                 ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(getContext(),
                         android.R.layout.simple_spinner_item, driverNames);
                 spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinnerDrivers.setAdapter(spinnerAdapter);
 
-                // Set current driver in spinner
-                int selectionIndex = 0;
-                if (shuttle.getDriverId() != null && !shuttle.getDriverId().isEmpty()) {
-                    selectionIndex = driverIds.indexOf(shuttle.getDriverId());
-                    if (selectionIndex < 0) selectionIndex = 0;
-                }
-                spinnerDrivers.setSelection(selectionIndex, false);
+                int selectionIndex = driverIds.indexOf(shuttle.getDriverId());
+                spinnerDrivers.setSelection(selectionIndex < 0 ? 0 : selectionIndex, false);
 
                 spinnerDrivers.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-                        String selectedDriverId = driverIds.get(pos);
-                        String selectedDriverName = driverNames.get(pos);
-
-                        // Only update if it actually changed to avoid infinite loop from listener
-                        if (!selectedDriverId.equals(shuttle.getDriverId())) {
-                            updateShuttleDriver(shuttle.getShuttleId(), selectedDriverId, selectedDriverName);
+                        String newDriverId = driverIds.get(pos);
+                        if (!newDriverId.equals(shuttle.getDriverId())) {
+                            updateShuttleAssignment(shuttle, newDriverId, driverNames.get(pos));
                         }
                     }
-
                     @Override
                     public void onNothingSelected(AdapterView<?> parent) {}
                 });
@@ -155,23 +152,35 @@ public class AdminDriversFragment extends Fragment {
         listView.setAdapter(adapter);
     }
 
-    private void updateShuttleDriver(int shuttleId, String driverId, String driverName) {
-        DatabaseReference shuttleRef = db.child("shuttles").child(String.valueOf(shuttleId));
-
-        // Determine status and active state based on whether a driver is assigned
-        boolean isActive = !driverId.isEmpty();
-        String status = isActive ? "Deployed" : "Standby";
-
-        // Update all relevant fields to match the required Firebase structure
-        shuttleRef.child("driverId").setValue(driverId);
-        shuttleRef.child("driverName").setValue(driverName);
-        shuttleRef.child("active").setValue(isActive);
-        shuttleRef.child("status").setValue(status)
-                .addOnSuccessListener(a -> {
-                    if (getContext() != null) {
-                        String msg = isActive ? "Driver assigned to Shuttle " : "Driver removed from Shuttle ";
-                        Toast.makeText(getContext(), msg + shuttleId, Toast.LENGTH_SHORT).show();
-                    }
-                });
-        }
+    private void bindCurrentDevice(int shuttleId) {
+        String androidId = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        db.child("shuttles").child(String.valueOf(shuttleId)).child("deviceId").setValue(androidId)
+                .addOnSuccessListener(a -> Toast.makeText(getContext(), "Phone bound to Shuttle " + shuttleId, Toast.LENGTH_SHORT).show());
     }
+
+    private void clearDeviceBinding(int shuttleId) {
+        db.child("shuttles").child(String.valueOf(shuttleId)).child("deviceId").setValue("")
+            .addOnSuccessListener(a -> Toast.makeText(getContext(), "Device binding cleared", Toast.LENGTH_SHORT).show());
+    }
+
+    private void updateShuttleAssignment(Shuttle shuttle, String newDriverId, String newDriverName) {
+        String oldDriverId = shuttle.getDriverId();
+        int shuttleId = shuttle.getShuttleId();
+
+        if (oldDriverId != null && !oldDriverId.isEmpty()) {
+            db.child("users").child(oldDriverId).child("assignedShuttleId").setValue(-1);
+        }
+
+        if (!newDriverId.isEmpty()) {
+            db.child("users").child(newDriverId).child("assignedShuttleId").setValue(shuttleId);
+        }
+
+        DatabaseReference shuttleRef = db.child("shuttles").child(String.valueOf(shuttleId));
+        shuttleRef.child("driverId").setValue(newDriverId);
+        shuttleRef.child("driverName").setValue(newDriverName);
+        shuttleRef.child("status").setValue(newDriverId.isEmpty() ? "Standby" : "Deployed");
+        shuttleRef.child("active").setValue(!newDriverId.isEmpty());
+        
+        Toast.makeText(getContext(), "Assignment updated", Toast.LENGTH_SHORT).show();
+    }
+}

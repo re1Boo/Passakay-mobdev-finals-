@@ -38,8 +38,7 @@ public class SplashActivity extends AppCompatActivity {
 
         animateDots(dot1, dot2, dot3);
 
-        // Seeder is now commented out to prevent session hijacking during development.
-        // Run it once manually if database needs resetting.
+        // Run seeder once if needed to populate assignments
         // DataSeeder seeder = new DataSeeder();
         // seeder.seedAll();
 
@@ -71,7 +70,6 @@ public class SplashActivity extends AppCompatActivity {
                         goToLogin();
                     }
                 }
-
                 @Override
                 public void onCancelled(@NonNull DatabaseError error) {
                     goToLogin();
@@ -83,27 +81,26 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void redirectBasedOnRole(User user, String uid) {
-        Intent intent;
         String role = user.getRole();
-        
-        if ("bus".equals(role) || "driver".equals(role)) {
-            // Auto-deploy logic for bus/driver to prevent dashboard flickering
-            autoDeployAndGo(user, uid);
-            return;
+        if ("driver".equals(role)) {
+            // Driver uses assigned shuttle logic
+            if (user.getAssignedShuttleId() > 0) {
+                autoDeployAndGo(user, uid, user.getAssignedShuttleId());
+            } else {
+                mAuth.signOut();
+                goToLogin();
+                Toast.makeText(this, "No shuttle assigned.", Toast.LENGTH_SHORT).show();
+            }
         } else if ("admin".equals(role)) {
-            intent = new Intent(SplashActivity.this, AdminDashboardActivity.class);
+            startActivity(new Intent(SplashActivity.this, AdminDashboardActivity.class));
+            finish();
         } else {
-            intent = new Intent(SplashActivity.this, PassengerHomeActivity.class);
+            startActivity(new Intent(SplashActivity.this, PassengerHomeActivity.class));
+            finish();
         }
-        
-        startActivity(intent);
-        finish();
     }
 
-    private void autoDeployAndGo(User user, String uid) {
-        String studentId = user.getStudentId();
-        int shuttleId = "BUS-2".equals(studentId) ? 2 : 1;
-
+    private void autoDeployAndGo(User user, String uid, int shuttleId) {
         DatabaseReference shuttleRef = db.child("shuttles").child(String.valueOf(shuttleId));
         shuttleRef.child("status").setValue("Deployed");
         shuttleRef.child("driverId").setValue(uid);
@@ -112,7 +109,7 @@ public class SplashActivity extends AppCompatActivity {
 
         Intent intent = new Intent(SplashActivity.this, ShuttleStopActivity.class);
         intent.putExtra("shuttleId", String.valueOf(shuttleId));
-        intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, "Bus " + shuttleId);
+        intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, "Shuttle " + shuttleId);
         startActivity(intent);
         finish();
     }

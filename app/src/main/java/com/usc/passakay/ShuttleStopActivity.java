@@ -1,14 +1,24 @@
 package com.usc.passakay;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
-import android.widget.Button;
+import android.os.Looper;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -16,6 +26,7 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
@@ -36,6 +47,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
 
     private static final double DEFAULT_LAT = 10.3541;
     private static final double DEFAULT_LNG = 123.9115;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1002;
 
     private MapView mapView;
     private GoogleMap googleMap;
@@ -48,12 +60,17 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     private final List<StopItem> stopList = new ArrayList<>();
     private DatabaseReference db;
 
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
+    private Marker driverMarker;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_shuttle_stop);
 
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         busName   = getIntent().getStringExtra(EXTRA_BUS_NAME);
         driverLat = getIntent().getDoubleExtra(EXTRA_DRIVER_LAT, DEFAULT_LAT);
@@ -69,25 +86,52 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         stopAdapter = new StopAdapter(this, stopList);
         recyclerStops.setAdapter(stopAdapter);
 
-        Button btnStopDriving = findViewById(R.id.btnStopDriving);
-        btnStopDriving.setOnClickListener(v -> stopDriving());
-
         loadStopsFromFirebase();
         setupBottomNav();
+        startLocationUpdates();
     }
 
-    private void stopDriving() {
-        if (shuttleId == null) return;
-        
-        DatabaseReference shuttleRef = db.child("shuttles").child(shuttleId);
-        shuttleRef.child("status").setValue("Standby");
-        shuttleRef.child("driverId").setValue("");
-        shuttleRef.child("driverName").setValue("No driver");
+    private void startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+            return;
+        }
 
-        Intent intent = new Intent(this, DriverDashboardActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000)
+                .setMinUpdateIntervalMillis(1500)
+                .build();
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                for (Location location : locationResult.getLocations()) {
+                    updateShuttleLocationInDB(location.getLatitude(), location.getLongitude());
+                }
+            }
+        };
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+    }
+
+    private void updateShuttleLocationInDB(double lat, double lng) {
+        if (shuttleId != null) {
+            db.child("shuttles").child(shuttleId).child("currentLat").setValue(lat);
+            db.child("shuttles").child(shuttleId).child("currentLng").setValue(lng);
+        }
+        
+        // Also update local marker
+        if (googleMap != null) {
+            LatLng newLoc = new LatLng(lat, lng);
+            if (driverMarker != null) {
+                driverMarker.setPosition(newLoc);
+            } else {
+                driverMarker = googleMap.addMarker(new MarkerOptions()
+                        .position(newLoc)
+                        .title(busName != null ? busName : "Shuttle")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+            }
+            // googleMap.animateCamera(CameraUpdateFactory.newLatLng(newLoc));
+        }
     }
 
     private void loadStopsFromFirebase() {
@@ -120,9 +164,12 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     public void onMapReady(GoogleMap map) {
         this.googleMap = map;
         MapsInitializer.initialize(this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            googleMap.setMyLocationEnabled(true);
+        }
 
         LatLng shuttleLoc = new LatLng(driverLat, driverLng);
-        googleMap.addMarker(new MarkerOptions()
+        driverMarker = googleMap.addMarker(new MarkerOptions()
                 .position(shuttleLoc)
                 .title(busName != null ? busName : "Shuttle")
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
@@ -135,8 +182,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                // If driving, staying in this activity is preferred when "Home" is tapped,
-                // but if they are already here, we do nothing or re-init.
                 return true;
             } else if (id == R.id.nav_history) {
                 return true;
@@ -148,8 +193,24 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         });
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startLocationUpdates();
+            }
+        }
+    }
+
     @Override protected void onResume()  { super.onResume();  mapView.onResume(); }
-    @Override protected void onPause()   { super.onPause();   mapView.onPause();  }
+    @Override protected void onPause()   { 
+        super.onPause();   
+        mapView.onPause();  
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+    }
     @Override protected void onDestroy() { super.onDestroy(); mapView.onDestroy();}
     @Override public    void onLowMemory()          { super.onLowMemory(); mapView.onLowMemory(); }
     @Override protected void onSaveInstanceState(Bundle out) {

@@ -52,8 +52,7 @@ public class DriverHomeActivity extends BaseActivity {
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
         
         // Fixed: Pass getSupportFragmentManager() as the third argument
-//        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
-          shuttleAdapter = new ShuttleAdapter(this, shuttleList);
+        shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
 
         recyclerShuttles.setAdapter(shuttleAdapter);
 

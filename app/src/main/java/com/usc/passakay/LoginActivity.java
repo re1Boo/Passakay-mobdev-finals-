@@ -2,6 +2,8 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -17,13 +19,13 @@ import com.google.firebase.database.ValueEventListener;
 
 public class LoginActivity extends BaseActivity {
 
+    private static final String TAG = "LoginActivity";
     private EditText etStudentId, etPassword;
     private Button btnLogin;
     private TextView btnCreateAccount;
     private FirebaseAuth mAuth;
     private DatabaseReference db;
 
-    // Secret tap counter
     private int tapCount = 0;
     private static final int SECRET_TAPS = 7;
 
@@ -32,35 +34,25 @@ public class LoginActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login_screen);
 
-        // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
-        // ⚠️ Sign out any existing session when landing on login page
         mAuth.signOut();
 
-        // Bind views
         etStudentId      = findViewById(R.id.etStudentId);
         etPassword       = findViewById(R.id.etPassword);
         btnLogin         = findViewById(R.id.btnLogin);
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
         ImageView imgLogo = findViewById(R.id.imgLogo);
 
-        // Login button
         btnLogin.setOnClickListener(v -> handleLogin());
 
-        // Create account
         btnCreateAccount.setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class))
         );
 
-        // Secret tap on logo → Admin login
         imgLogo.setOnClickListener(v -> {
             tapCount++;
-            int remaining = SECRET_TAPS - tapCount;
-            if (remaining <= 3 && remaining > 0) {
-                Toast.makeText(this, remaining + " more...", Toast.LENGTH_SHORT).show();
-            }
             if (tapCount >= SECRET_TAPS) {
                 tapCount = 0;
                 startActivity(new Intent(LoginActivity.this, AdminLoginActivity.class));
@@ -72,20 +64,13 @@ public class LoginActivity extends BaseActivity {
         String studentId = etStudentId.getText().toString().trim();
         String password  = etPassword.getText().toString().trim();
 
-        if (studentId.isEmpty()) {
-            etStudentId.setError("Please enter your Student ID");
-            etStudentId.requestFocus();
-            return;
-        }
-
-        if (password.isEmpty()) {
-            etPassword.setError("Please enter your password");
-            etPassword.requestFocus();
+        if (studentId.isEmpty() || password.isEmpty()) {
+            showError("Please fill in all fields");
             return;
         }
 
         btnLogin.setEnabled(false);
-        btnLogin.setText("Logging in...");
+        btnLogin.setText("Verifying...");
 
         db.child("users").orderByChild("studentId").equalTo(studentId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -95,12 +80,17 @@ public class LoginActivity extends BaseActivity {
                             for (DataSnapshot child : snapshot.getChildren()) {
                                 User user = child.getValue(User.class);
                                 if (user != null) {
-                                    // Block check
                                     if ("blocked".equals(user.getStatus())) {
-                                        showError("Your account has been blocked. Please contact admin.");
+                                        showError("Your account is blocked.");
                                         return;
                                     }
-                                    loginWithEmail(user.getEmail(), password);
+                                    
+                                    // If user is a driver, check device binding
+                                    if ("driver".equals(user.getRole())) {
+                                        checkDriverDevice(user, password);
+                                    } else {
+                                        loginWithEmail(user.getEmail(), password);
+                                    }
                                 }
                             }
                         } else {
@@ -115,86 +105,83 @@ public class LoginActivity extends BaseActivity {
                 });
     }
 
-    private void loginWithEmail(String email, String password) {
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnSuccessListener(authResult -> {
-                    String uid = authResult.getUser().getUid();
-                    goToHome(uid);
-                })
-                .addOnFailureListener(e -> showError("Invalid password"));
-    }
+    private void checkDriverDevice(User user, String password) {
+        int assignedId = user.getAssignedShuttleId();
+        if (assignedId <= 0) {
+            showError("No shuttle assigned to you. Contact admin.");
+            return;
+        }
 
-    private void goToHome(String uid) {
-        db.child("users").child(uid)
+        String currentDeviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
+        db.child("shuttles").child(String.valueOf(assignedId))
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
-                        User user = snapshot.getValue(User.class);
-                        if (user != null) {
-                            Intent intent;
-                            switch (user.getRole()) {
-                                case "driver":
-                                    intent = new Intent(LoginActivity.this, ShuttleStopActivity.class);
-                                    break;
-
-                                case "bus":
-                                    autoDeployBus(user.getStudentId(),uid);
-                                    return;
-                                case "admin":
-                                    intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
-                                    break;
-                                default:
-                                    // Redirect passengers to PassengerHomeActivity instead of MainActivity
-                                    intent = new Intent(LoginActivity.this, PassengerHomeActivity.class);
-                                    break;
+                        Shuttle shuttle = snapshot.getValue(Shuttle.class);
+                        if (shuttle != null) {
+                            String registeredDeviceId = shuttle.getDeviceId();
+                            
+                            // If the shuttle has no device ID yet, the first login "binds" it (useful for setup)
+                            // Or, require admin to set it. Here we check for match.
+                            if (registeredDeviceId == null || registeredDeviceId.isEmpty()) {
+                                // Optional: Bind device automatically on first login if you want
+                                // db.child("shuttles").child(String.valueOf(assignedId)).child("deviceId").setValue(currentDeviceId);
+                                showError("This shuttle is not bound to any device. Contact admin.");
+                            } else if (!registeredDeviceId.equals(currentDeviceId)) {
+                                showError("Unauthorized device. Please use the assigned phone for Shuttle #" + assignedId);
+                            } else {
+                                loginWithEmail(user.getEmail(), password);
                             }
-                            intent.putExtra("userId", uid);
-                            // ← Clear back stack so user can't go back to login
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                            startActivity(intent);
-                            finish();
                         } else {
-                            showError("User data not found");
+                            showError("Assigned shuttle not found.");
                         }
                     }
 
                     @Override
                     public void onCancelled(DatabaseError error) {
-                        showError("Failed to get user data: " + error.getMessage());
+                        showError("Error checking device.");
                     }
                 });
     }
 
-    private void autoDeployBus(String studentId, String uid) {
+    private void loginWithEmail(String email, String password) {
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnSuccessListener(authResult -> goToHome(authResult.getUser().getUid()))
+                .addOnFailureListener(e -> showError("Invalid password"));
+    }
 
-        int shuttleId;
-
-        // SIMPLE HARD MAPPING
-        if ("BUS-1".equals(studentId)) {
-            shuttleId = 1;
-        } else if ("BUS-2".equals(studentId)) {
-            shuttleId = 2;
-        } else {
-            showError("Unknown bus account");
-            return;
-        }
-
-        // DEPLOY SHUTTLE
-        db.child("shuttles").child(String.valueOf(shuttleId)).child("active").setValue(true);
-        db.child("shuttles").child(String.valueOf(shuttleId)).child("status").setValue("Deployed");
-
-        // GO TO SHUTTLE SCREEN
-        Intent intent = new Intent(LoginActivity.this, ShuttleStopActivity.class);
-        intent.putExtra("shuttleId", shuttleId);
-        intent.putExtra("busUid", uid);
-
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+    private void goToHome(String uid) {
+        db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user != null) {
+                    Intent intent;
+                    switch (user.getRole()) {
+                        case "driver":
+                            intent = new Intent(LoginActivity.this, ShuttleStopActivity.class);
+                            intent.putExtra("shuttleId", String.valueOf(user.getAssignedShuttleId()));
+                            break;
+                        case "admin":
+                            intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
+                            break;
+                        default:
+                            intent = new Intent(LoginActivity.this, PassengerHomeActivity.class);
+                            break;
+                    }
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError error) {}
+        });
     }
 
     private void showError(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
         btnLogin.setEnabled(true);
         btnLogin.setText("Login");
     }

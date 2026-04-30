@@ -1,243 +1,264 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F8F9FA">
 
-    <!-- Header -->
-    <include
-        android:id="@+id/header"
-        layout="@layout/header"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <!-- Status Card -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cardStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="6dp"
-        app:cardBackgroundColor="#14D337"
-        app:layout_constraintTop_toBottomOf="@id/header">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_location_pin"
-                            android:layout_marginEnd="6dp"
-                            app:tint="#FFFFFF"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="FROM"
-                            android:textColor="#C8F5CE"
-                            android:textSize="10sp"
-                            android:letterSpacing="0.1"
-                            android:fontFamily="@font/kanit"/>
-
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvUserLoc"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Detecting location..."
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:fontFamily="@font/kanit"
-                        android:layout_marginBottom="8dp"
-                        android:layout_marginStart="22dp"/>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/arrowdown"
-                        android:layout_marginStart="22dp"
-                        android:layout_marginBottom="4dp"
-                        app:tint="#C8F5CE"/>
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_location_pin"
-                            android:layout_marginEnd="6dp"
-                            app:tint="#FFEA08"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="TO"
-                            android:textColor="#C8F5CE"
-                            android:textSize="10sp"
-                            android:letterSpacing="0.1"
-                            android:fontFamily="@font/kanit"/>
-
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvDestination"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Select destination"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:fontFamily="@font/kanit"
-                        android:layout_marginStart="22dp"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnWaitingStatus"
-                        style="@style/Widget.MaterialComponents.Button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="NOT WAITING"
-                        android:textColor="#FFFFFF"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:fontFamily="@font/kanit"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        app:backgroundTint="#FFEA08"
-                        app:cornerRadius="20dp"
-                        app:iconTint="#14D337"
-                        app:iconSize="16dp"
-                        app:iconPadding="4dp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#C8F5CE"
-                android:alpha="0.4"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="10dp"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/qr_code_scanner"
-                    android:layout_marginEnd="6dp"
-                    app:tint="#C8F5CE"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Scan QR at the stop to notify drivers"
-                    android:textColor="#C8F5CE"
-                    android:textSize="11sp"
-                    android:fontFamily="@font/kanit"/>
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </androidx.cardview.widget.CardView>
-
-    <!-- Title -->
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Available Shuttles"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="#1A1A1A"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/cardStatus"
-        app:layout_constraintStart_toStartOf="parent"/>
-
-    <!-- Shuttle List -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerShuttles"
+    <!-- CoordinatorLayout for Map and Bottom Sheet -->
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/coordinator"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="80dp"
-        android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle"
-        app:layout_constraintBottom_toTopOf="@id/bottom_nav"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottom_nav">
 
-    <!-- ✅ FAB properly pinned to bottom right above bottom nav -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabScanQR"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/qr_code_scanner"
-        app:backgroundTint="#FFEA08"
-        app:maxImageSize="32dp"
-        app:tint="#1A1A1A"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/bottom_nav"/>
+        <!-- Map View as Background -->
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/mapViewMain"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    <!-- Bottom Navigation -->
+        <!-- Overlay Content -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- Header -->
+            <include
+                android:id="@+id/header"
+                layout="@layout/header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+
+            <!-- Status Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="6dp"
+                app:cardBackgroundColor="#14D337"
+                app:layout_constraintTop_toBottomOf="@id/header">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_location_pin"
+                                    android:layout_marginEnd="6dp"
+                                    app:tint="#FFFFFF"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="FROM"
+                                    android:textColor="#C8F5CE"
+                                    android:textSize="10sp"
+                                    android:letterSpacing="0.1"
+                                    android:fontFamily="@font/kanit"/>
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvUserLoc"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Detecting location..."
+                                android:textColor="#FFFFFF"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:fontFamily="@font/kanit"
+                                android:layout_marginBottom="8dp"
+                                android:layout_marginStart="22dp"/>
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:src="@drawable/arrowdown"
+                                android:layout_marginStart="22dp"
+                                android:layout_marginBottom="4dp"
+                                app:tint="#C8F5CE"/>
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_location_pin"
+                                    android:layout_marginEnd="6dp"
+                                    app:tint="#FFEA08"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="TO"
+                                    android:textColor="#C8F5CE"
+                                    android:textSize="10sp"
+                                    android:letterSpacing="0.1"
+                                    android:fontFamily="@font/kanit"/>
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvDestination"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Select destination"
+                                android:textColor="#FFFFFF"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:fontFamily="@font/kanit"
+                                android:layout_marginStart="22dp"/>
+
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnWaitingStatus"
+                            style="@style/Widget.MaterialComponents.Button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="NOT WAITING"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/kanit"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            app:backgroundTint="#FFEA08"
+                            app:cornerRadius="20dp"/>
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#C8F5CE"
+                        android:alpha="0.4"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="10dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/qr_code_scanner"
+                            android:layout_marginEnd="6dp"
+                            app:tint="#C8F5CE"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Scan QR at the stop to notify drivers"
+                            android:textColor="#C8F5CE"
+                            android:textSize="11sp"
+                            android:fontFamily="@font/kanit"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Draggable Bottom Sheet -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/bottomSheet"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/rounded_top_white"
+            android:elevation="8dp"
+            app:behavior_hideable="false"
+            app:behavior_peekHeight="150dp"
+            app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Drag handle -->
+                <View
+                    android:layout_width="40dp"
+                    android:layout_height="4dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="#CCCCCC"/>
+
+                <!-- Title -->
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Available Shuttles"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A1A"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- Shuttle List -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerShuttles"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="20dp"
+                    android:clipToPadding="false"/>
+
+            </LinearLayout>
+
+        </androidx.core.widget.NestedScrollView>
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <!-- Bottom Navigation - Always visible at the bottom -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#ffffff"
+        android:elevation="16dp"
         app:menu="@menu/menu"
         app:labelVisibilityMode="labeled"
         app:itemIconTint="#1A1A1A"
@@ -246,5 +267,36 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- QR FAB moved to root to appear in front of everything -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabScanQR"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/qr_code_scanner"
+        app:backgroundTint="#FFEA08"
+        app:maxImageSize="32dp"
+        app:tint="#1A1A1A"
+        android:elevation="24dp"
+        app:elevation="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="150dp" />
+
+    <!-- My Location FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabMyLocation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_location_pin"
+        app:backgroundTint="#FFFFFF"
+        app:tint="#1A1A1A"
+        android:elevation="24dp"
+        app:elevation="24dp"
+        app:layout_constraintBottom_toTopOf="@id/fabScanQR"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

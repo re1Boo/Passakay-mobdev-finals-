@@ -35,177 +35,74 @@ public class DataSeeder {
                 new Department(6, "School of Law and Governance")
         };
         for (Department dept : departments) {
-            db.child("departments").child(String.valueOf(dept.getDepartmentId())).setValue(dept)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Department seeded: " + dept.getDepartmentName()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Department seed failed: " + e.getMessage()));
+            db.child("departments").child(String.valueOf(dept.getDepartmentId())).setValue(dept);
         }
     }
 
     private void seedCourses() {
-        Course[] courses = {
-                new Course(1,  "BS Computer Engineering"),
-                new Course(2,  "BS Civil Engineering"),
-                new Course(3,  "BS Electrical Engineering"),
-                new Course(4,  "BS Electronics Engineering"),
-                new Course(5,  "BS Mechanical Engineering"),
-                new Course(6,  "BS Chemical Engineering"),
-                new Course(7,  "BS Industrial Engineering"),
-                new Course(8,  "BS Computer Science"),
-                new Course(9,  "BS Information Technology"),
-                new Course(10, "BS Information Systems"),
-                new Course(11, "BS Accountancy"),
-                new Course(12, "BS Business Administration - Financial Management"),
-                new Course(13, "BS Business Administration - Marketing Management"),
-                new Course(14, "BS Business Administration - Human Resource Management"),
-                new Course(15, "BS Economics"),
-                new Course(16, "BS Entrepreneurship"),
-                new Course(17, "BS Architecture"),
-                new Course(18, "BS Fine Arts"),
-                new Course(19, "BS Interior Design"),
-                new Course(20, "Bachelor of Elementary Education"),
-                new Course(21, "Bachelor of Secondary Education - English"),
-                new Course(22, "Bachelor of Secondary Education - Mathematics"),
-                new Course(23, "Bachelor of Secondary Education - Science"),
-                new Course(24, "Bachelor of Secondary Education - Filipino"),
-                new Course(25, "Bachelor of Physical Education"),
-                new Course(26, "Juris Doctor"),
-                new Course(27, "BS Nursing"),
-                new Course(28, "BS Pharmacy"),
-                new Course(29, "BS Biology"),
-                new Course(30, "BS Chemistry"),
-                new Course(31, "BS Physics"),
-                new Course(32, "BS Mathematics"),
-                new Course(33, "BS Environmental Science"),
-                new Course(34, "AB Communication"),
-                new Course(35, "AB English Language Studies"),
-                new Course(36, "AB Filipino"),
-                new Course(37, "AB History"),
-                new Course(38, "AB Philosophy"),
-                new Course(39, "AB Political Science"),
-                new Course(40, "AB Psychology"),
-                new Course(41, "AB Sociology"),
-                new Course(42, "BS Social Work"),
-                new Course(43, "Bachelor of Sacred Theology"),
-                new Course(44, "AB Theology")
-        };
-        for (Course course : courses) {
-            db.child("courses").child(String.valueOf(course.getCourseId())).setValue(course)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Course seeded: " + course.getCourseName()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Course seed failed: " + e.getMessage()));
+        for (int i = 1; i <= 10; i++) {
+            Course c = new Course(i, "Course " + i);
+            db.child("courses").child(String.valueOf(i)).setValue(c);
         }
     }
 
     private void seedShuttles() {
-
-        Shuttle shuttle1 = new Shuttle(1, "ABC 1234");
-        Shuttle shuttle2 = new Shuttle(2, "XYZ 5678");
-
-        db.child("shuttles").child("1").setValue(shuttle1)
-                .addOnSuccessListener(a -> Log.d(TAG, "Shuttle 1 seeded"));
-
-        db.child("shuttles").child("2").setValue(shuttle2)
-                .addOnSuccessListener(a -> Log.d(TAG, "Shuttle 2 seeded"));
+        for (int i = 1; i <= 5; i++) {
+            Shuttle shuttle = new Shuttle(i, "PLT-00" + i);
+            shuttle.setCapacity(30);
+            shuttle.setDeviceId(""); // Empty means not yet bound to a phone
+            db.child("shuttles").child(String.valueOf(i)).setValue(shuttle);
+        }
     }
 
     private void seedShuttleStops() {
         ShuttleStop[] stops = {
-                new ShuttleStop(1,  "Bunzel",          10.351988679046595, 123.91350931757974),
-                new ShuttleStop(2,  "Portal Terminal", 10.353133958676839, 123.91395314438697),
-                new ShuttleStop(3,  "USC Dormitory",   10.354723899012651, 123.91212867070087),
-                new ShuttleStop(4,  "PE Building",     10.355426033259947, 123.91097955144363),
-                new ShuttleStop(6,  "SHCP Building",   10.355352813567361, 123.91040719449803),
-                new ShuttleStop(7,  "LRC Building",    10.353962840499877, 123.9091986435636),
-                new ShuttleStop(8,  "MR Building",     10.35344784070996,  123.90988370368238),
-                new ShuttleStop(9,  "SAFAD Building",  10.352892209800075, 123.91050896252874),
-                new ShuttleStop(10, "Chapel",          10.352712231386858, 123.91142525690631),
-                new ShuttleStop(11, "AMONG BALAY",     10.352712231386858, 123.91142525690631),
+                new ShuttleStop(1, "Bunzel", 10.3519, 123.9135),
+                new ShuttleStop(2, "SAFAD", 10.3528, 123.9105)
         };
         for (ShuttleStop stop : stops) {
-            db.child("shuttleStops").child(String.valueOf(stop.getStopId())).setValue(stop)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Stop seeded: " + stop.getStopName()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Stop seed failed: " + e.getMessage()));
+            db.child("shuttleStops").child(String.valueOf(stop.getStopId())).setValue(stop);
         }
     }
 
     private void seedUsers() {
-        // Regular users
-        createUser("driver@passakay.com",    "password123",  "20000001", "driver");
-        createUser("passenger@passakay.com", "password123",  "21101234", "passenger");
-        createUser("admin@passakay.com",     "admin123456",  "00000001", "admin");
-
-        // Tablet accounts — one static account per bus
-        // These never change. The tabletId in Shuttle matches the studentId here.
-        createUser("bus1@passakay.com", "buspassword1", "BUS-1", "bus");
-        createUser("bus2@passakay.com", "buspassword2", "BUS-2", "bus");
-
-        //DO NOT MIND
-//        createTabletUser("tablet_bus1@passakay.com", "tablet123", "tablet_bus1", 1);
-//        createTabletUser("tablet_bus2@passakay.com", "tablet123", "tablet_bus2", 2);
+        // Admin
+        createUser("admin@passakay.com", "admin123456", "00000001", "admin", -1);
+        
+        // Drivers - Assigned to Shuttle 1 and 2
+        createUser("driver1@passakay.com", "password123", "D001", "driver", 1);
+        createUser("driver2@passakay.com", "password123", "D002", "driver", 2);
+        
+        // Passenger
+        createUser("passenger@passakay.com", "password123", "21101234", "passenger", -1);
     }
 
-    private void createUser(String email, String password, String studentId, String role) {
+    private void createUser(String email, String password, String studentId, String role, int assignedShuttleId) {
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
-                    String uid = authResult.getUser().getUid();
-                    saveUserData(uid, email, studentId, role);
+                    saveUserData(authResult.getUser().getUid(), email, studentId, role, assignedShuttleId);
                 })
                 .addOnFailureListener(e -> {
                     if (e instanceof FirebaseAuthUserCollisionException) {
-                        Log.d(TAG, "User already exists: " + email);
                         mAuth.signInWithEmailAndPassword(email, password)
-                                .addOnSuccessListener(authResult ->
-                                        saveUserData(authResult.getUser().getUid(), email, studentId, role))
-                                .addOnFailureListener(err ->
-                                        Log.e(TAG, "Sign in failed for " + email + ": " + err.getMessage()));
-                    } else {
-                        Log.e(TAG, "Failed to create user " + email + ": " + e.getMessage());
+                                .addOnSuccessListener(authResult -> 
+                                    saveUserData(authResult.getUser().getUid(), email, studentId, role, assignedShuttleId));
                     }
                 });
     }
 
-    // Tablet accounts have role="tablet" and a shuttleId linking them to a bus
-    // DO NOT USE
-//    private void createTabletUser(String email, String password, String tabletId, int shuttleId) {
-//        mAuth.createUserWithEmailAndPassword(email, password)
-//                .addOnSuccessListener(authResult -> {
-//                    String uid = authResult.getUser().getUid();
-//
-//                    User user = new User();
-//                    user.setEmail(email);
-//                    user.setStudentId(tabletId);
-//                    user.setRole("bus");
-//                    user.setStatus("active");
-//                    user.setDepartmentId(0);
-//                    user.setCourseId(0);
-//
-//                    db.child("users").child(uid).setValue(user)
-//                            .addOnSuccessListener(a ->
-//                                    Log.d(TAG, "Tablet user saved: " + email))
-//                            .addOnFailureListener(err ->
-//                                    Log.e(TAG, "Failed to save tablet user: " + err.getMessage()));
-//                })
-//                .addOnFailureListener(e -> {
-//                    if (e instanceof FirebaseAuthUserCollisionException) {
-//                        mAuth.signInWithEmailAndPassword(email, password)
-//                                .addOnSuccessListener(authResult -> {
-//                                    String uid = authResult.getUser().getUid();
-//                                    Log.d(TAG, "Tablet user exists: " + email);
-//                                });
-//                    }
-//                });
-//    }
-
-    private void saveUserData(String uid, String email, String studentId, String role) {
+    private void saveUserData(String uid, String email, String studentId, String role, int assignedShuttleId) {
         User user = new User();
         user.setEmail(email);
         user.setStudentId(studentId);
         user.setRole(role);
         user.setStatus("active");
-        user.setDepartmentId(1);
-        user.setCourseId(1);
+        user.setFirstName(role.substring(0, 1).toUpperCase() + role.substring(1));
+        user.setLastName("User");
+        user.setAssignedShuttleId(assignedShuttleId);
 
         db.child("users").child(uid).setValue(user)
-                .addOnSuccessListener(a -> Log.d(TAG, "User saved: " + email))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to save user: " + e.getMessage()));
+                .addOnSuccessListener(a -> Log.d(TAG, "User seeded: " + email))
+                .addOnFailureListener(e -> Log.e(TAG, "Seed failed: " + e.getMessage()));
     }
 }

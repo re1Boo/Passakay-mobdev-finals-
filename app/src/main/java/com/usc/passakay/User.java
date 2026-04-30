@@ -10,6 +10,7 @@ public class User {
     private String status;
     private String email;
     private String studentId;
+    private int assignedShuttleId; // ID of the shuttle assigned to this driver (-1 if none)
 
     public User() {}
 
@@ -24,6 +25,7 @@ public class User {
         this.status = status;
         this.email = email;
         this.studentId = studentId;
+        this.assignedShuttleId = -1;
     }
 
     public int getUserId() { return userId; }
@@ -52,4 +54,7 @@ public class User {
 
     public String getStudentId() { return studentId; }
     public void setStudentId(String studentId) { this.studentId = studentId; }
+
+    public int getAssignedShuttleId() { return assignedShuttleId; }
+    public void setAssignedShuttleId(int assignedShuttleId) { this.assignedShuttleId = assignedShuttleId; }
 }

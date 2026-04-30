@@ -45,7 +45,8 @@ dependencies {
     implementation(libs.firebase.database)    // ← Realtime Database
 
     // Google Maps
-    implementation(libs.play.services.maps)   // ← keep only this one
+    implementation(libs.play.services.maps)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 
     implementation(libs.circleimageview)
     

@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -19,8 +20,11 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.List;
 
@@ -32,18 +36,16 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     private DatabaseReference db;
     private final boolean isPassengerView;
 
-    public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList) {
+    public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList, FragmentManager fragmentManager) {
         this.context = context;
         this.shuttleList = shuttleList;
         this.db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
-        // Determine if this is the passenger view to load the correct layout
-        this.isPassengerView = context instanceof PassengerHomeActivity || context instanceof MainActivity;
+        this.isPassengerView = context instanceof PassengerHomeActivity;
     }
 
     @NonNull
     @Override
     public ShuttleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Load item_shuttle for passengers (with ETA) and item_shuttle_2 for others
         int layoutId = isPassengerView ? R.layout.item_shuttle : R.layout.item_shuttle_2;
         View view = LayoutInflater.from(context).inflate(layoutId, parent, false);
         return new ShuttleViewHolder(view);
@@ -58,7 +60,6 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         holder.tvDriverName.setText("Driver: " + (shuttle.isAvailable() ? shuttle.getDriverName() : "Unavailable"));
         holder.tvPlateNumber.setText("Plate: " + shuttle.getPlateNumber());
 
-        // Handle ETA display for passenger view
         if (isPassengerView && holder.tvEta != null) {
             holder.tvEta.setText(String.valueOf(shuttle.getEta()));
             if (holder.etaBadge != null) {
@@ -71,7 +72,6 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             }
         }
 
-        // Handle card styling
         if (!shuttle.isAvailable()) {
             holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
             holder.tvBusName.setTextColor(Color.parseColor("#757575"));
@@ -80,7 +80,6 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
         }
 
-        // Handle Map Visibility
         if (holder.cardMap != null) {
             holder.cardMap.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
             if (isExpanded) {
@@ -88,10 +87,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             }
         }
 
-        // Toggle Expand/Collapse on card click
         holder.cardShuttle.setOnClickListener(v -> {
-            if (!shuttle.isAvailable() && !isPassengerView) return;
-            
             int currentPos = holder.getBindingAdapterPosition();
             if (currentPos == RecyclerView.NO_POSITION) return;
 
@@ -119,6 +115,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         MapView mapView;
         GoogleMap googleMap;
         ShuttleItem currentShuttle;
+        DatabaseReference db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
         ShuttleViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -140,24 +137,48 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         @Override
         public void onMapReady(GoogleMap googleMap) {
             this.googleMap = googleMap;
-            googleMap.getUiSettings().setAllGesturesEnabled(false);
+            googleMap.getUiSettings().setAllGesturesEnabled(true); // ENABLE GESTURES
+            googleMap.getUiSettings().setZoomControlsEnabled(true);
             MapsInitializer.initialize(itemView.getContext());
             updateMapContents();
         }
 
         void bindMap(ShuttleItem shuttle) {
             currentShuttle = shuttle;
+            if (mapView != null) {
+                mapView.onResume();
+            }
             updateMapContents();
         }
 
         private void updateMapContents() {
             if (googleMap == null || currentShuttle == null) return;
-            LatLng shuttleLocation = new LatLng(currentShuttle.getDriverLat(), currentShuttle.getDriverLng());
             googleMap.clear();
+            
+            LatLng shuttleLocation = new LatLng(currentShuttle.getDriverLat(), currentShuttle.getDriverLng());
             googleMap.addMarker(new MarkerOptions()
                     .position(shuttleLocation)
                     .title(currentShuttle.getBusName())
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+            
+            // LOAD STOPS
+            db.child("shuttleStops").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    for (DataSnapshot stopSnap : snapshot.getChildren()) {
+                        ShuttleStop stop = stopSnap.getValue(ShuttleStop.class);
+                        if (stop != null) {
+                            googleMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
+                                    .title(stop.getStopName())
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                        }
+                    }
+                }
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {}
+            });
+
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLocation, 16));
         }
     }
