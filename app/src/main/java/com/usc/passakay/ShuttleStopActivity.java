@@ -29,6 +29,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -63,6 +64,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
     private Marker driverMarker;
+    private final List<Marker> stopMarkers = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,9 +88,21 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         stopAdapter = new StopAdapter(this, stopList);
         recyclerStops.setAdapter(stopAdapter);
 
+        FloatingActionButton fabMyLocation = findViewById(R.id.fabMyLocation);
+        fabMyLocation.setOnClickListener(v -> panToMyLocation());
+
         loadStopsFromFirebase();
         setupBottomNav();
         startLocationUpdates();
+    }
+
+    private void panToMyLocation() {
+        if (googleMap != null && (driverLat != 0 || driverLng != 0)) {
+            LatLng myLoc = new LatLng(driverLat, driverLng);
+            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, 17));
+        } else {
+            Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void startLocationUpdates() {
@@ -105,7 +119,9 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 for (Location location : locationResult.getLocations()) {
-                    updateShuttleLocationInDB(location.getLatitude(), location.getLongitude());
+                    driverLat = location.getLatitude();
+                    driverLng = location.getLongitude();
+                    updateShuttleLocationInDB(driverLat, driverLng);
                 }
             }
         };
@@ -130,7 +146,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                         .title(busName != null ? busName : "Shuttle")
                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
             }
-            // googleMap.animateCamera(CameraUpdateFactory.newLatLng(newLoc));
         }
     }
 
@@ -139,6 +154,12 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 stopList.clear();
+                // Clear existing stop markers from the map
+                for (Marker marker : stopMarkers) {
+                    marker.remove();
+                }
+                stopMarkers.clear();
+
                 for (DataSnapshot stopSnapshot : snapshot.getChildren()) {
                     ShuttleStop stop = stopSnapshot.getValue(ShuttleStop.class);
                     if (stop != null) {
@@ -148,6 +169,17 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                                 waiting,
                                 324 // Placeholder distance
                         ));
+
+                        // Add marker to map
+                        if (googleMap != null) {
+                            Marker stopMarker = googleMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
+                                    .title(stop.getStopName())
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                            if (stopMarker != null) {
+                                stopMarkers.add(stopMarker);
+                            }
+                        }
                     }
                 }
                 stopAdapter.notifyDataSetChanged();
@@ -174,6 +206,37 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 .title(busName != null ? busName : "Shuttle")
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLoc, 16));
+
+        // Redraw stops if they were already loaded
+        refreshStopMarkers();
+    }
+
+    private void refreshStopMarkers() {
+        if (googleMap == null) return;
+        // This is a bit redundant with loadStopsFromFirebase but handles the case where data loads before map is ready
+        db.child("shuttleStops").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (Marker marker : stopMarkers) {
+                    marker.remove();
+                }
+                stopMarkers.clear();
+
+                for (DataSnapshot stopSnapshot : snapshot.getChildren()) {
+                    ShuttleStop stop = stopSnapshot.getValue(ShuttleStop.class);
+                    if (stop != null) {
+                        Marker stopMarker = googleMap.addMarker(new MarkerOptions()
+                                .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
+                                .title(stop.getStopName())
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                        if (stopMarker != null) {
+                            stopMarkers.add(stopMarker);
+                        }
+                    }
+                }
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
 
     private void setupBottomNav() {

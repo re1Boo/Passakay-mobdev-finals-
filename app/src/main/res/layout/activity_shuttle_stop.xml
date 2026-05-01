@@ -38,7 +38,7 @@
             android:background="@drawable/rounded_top_white"
             android:elevation="8dp"
             app:behavior_hideable="false"
-            app:behavior_peekHeight="200dp"
+            app:behavior_peekHeight="100dp"
             app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
             <LinearLayout
@@ -90,6 +90,21 @@
             </LinearLayout>
 
         </androidx.core.widget.NestedScrollView>
+
+        <!-- My Location FAB -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabMyLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_location_pin"
+            app:backgroundTint="#FFFFFF"
+            app:tint="#1A1A1A"
+            android:elevation="12dp"
+            app:elevation="12dp"
+            app:layout_anchor="@id/bottomSheet"
+            app:layout_anchorGravity="top|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"/>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
