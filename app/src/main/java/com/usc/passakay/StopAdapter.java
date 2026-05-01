@@ -7,7 +7,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -16,12 +15,18 @@ import java.util.List;
 
 public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder> {
 
+    public interface OnPickUpClickListener {
+        void onPickUp(StopItem item);
+    }
+
     private final Context context;
     private final List<StopItem> stopList;
+    private final OnPickUpClickListener pickUpListener;
 
-    public StopAdapter(Context context, List<StopItem> stopList) {
+    public StopAdapter(Context context, List<StopItem> stopList, OnPickUpClickListener listener) {
         this.context  = context;
         this.stopList = stopList;
+        this.pickUpListener = listener;
     }
 
     @NonNull
@@ -39,26 +44,22 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
         holder.tvWaiting.setText("Waiting: " + stop.getWaitingCount());
         holder.tvDistance.setText("Distance: " + stop.getDistanceMeters() + "m");
 
-        // Yellow button = passengers waiting; gray = no passengers
         if (stop.getWaitingCount() > 0) {
             holder.btnPickUp.setEnabled(true);
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_yellow_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#000000"));
-            holder.btnPickUp.setBackgroundTintList(null);
             holder.btnPickUp.setAlpha(1.0f);
         } else {
             holder.btnPickUp.setEnabled(false);
             holder.btnPickUp.setBackgroundResource(R.drawable.rounded_gray_badge);
             holder.btnPickUp.setTextColor(Color.parseColor("#888888"));
-            holder.btnPickUp.setBackgroundTintList(null);
-            holder.btnPickUp.setAlpha(0.5f); // Make it look grayed out
+            holder.btnPickUp.setAlpha(0.5f);
         }
 
         holder.btnPickUp.setOnClickListener(v -> {
-            Toast.makeText(context,
-                    "Picking up at " + stop.getStopName(),
-                    Toast.LENGTH_SHORT).show();
-            // Real implementation would update Firebase here
+            if (pickUpListener != null) {
+                pickUpListener.onPickUp(stop);
+            }
         });
     }
 

@@ -6,12 +6,14 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -41,7 +43,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallback {
 
@@ -69,6 +73,14 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     private Marker driverMarker;
     private final List<Marker> stopMarkers = new ArrayList<>();
 
+    // Notification UI
+    private CardView cardNotification;
+    private TextView tvNotificationText;
+    private final Handler notificationHandler = new Handler(Looper.getMainLooper());
+    private Runnable hideNotificationRunnable;
+    private final Map<String, Integer> lastKnownCounts = new HashMap<>();
+    private boolean isFirstLoad = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,13 +94,19 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         driverLng = getIntent().getDoubleExtra(EXTRA_DRIVER_LNG, DEFAULT_LNG);
         shuttleId = getIntent().getStringExtra("shuttleId");
 
+        // Notification UI
+        cardNotification = findViewById(R.id.cardNotification);
+        tvNotificationText = findViewById(R.id.tvNotificationText);
+
         mapView = findViewById(R.id.mapViewStops);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
         recyclerStops = findViewById(R.id.recyclerStops);
         recyclerStops.setLayoutManager(new LinearLayoutManager(this));
-        stopAdapter = new StopAdapter(this, stopList);
+        
+        // Pass the pickup logic to the adapter
+        stopAdapter = new StopAdapter(this, stopList, this::pickUpPassengers);
         recyclerStops.setAdapter(stopAdapter);
 
         FloatingActionButton fabMyLocation = findViewById(R.id.fabMyLocation);
@@ -97,6 +115,56 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         loadStopsFromFirebase();
         setupBottomNav();
         startLocationUpdates();
+        
+        // Set first load to false after a short delay to avoid notifications on start
+        new Handler(Looper.getMainLooper()).postDelayed(() -> isFirstLoad = false, 3000);
+    }
+
+    /**
+     * PURPOSE: Clears the waiting list at the specified stop in Firebase.
+     * This "picks up" the passengers by deleting their scan records.
+     */
+    private void pickUpPassengers(StopItem stopItem) {
+        String stopName = stopItem.getStopName();
+        String scanKey = getScanKey(stopName);
+        
+        db.child("scans").child(scanKey).removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Picked up all passengers at " + stopName, Toast.LENGTH_SHORT).show();
+                    // UI will update automatically via listeners
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Error during pickup: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    private String getScanKey(String stopName) {
+        String scanKey = stopName + "_com";
+        if (stopName.equalsIgnoreCase("SAFAD")) {
+            scanKey = "SAFAD Building_com";
+        } else if (stopName.equalsIgnoreCase("Bunzel")) {
+            scanKey = "Bunzel_com";
+        }
+        return scanKey;
+    }
+
+    private void showPopUpNotification(String message) {
+        if (isFirstLoad) return;
+        
+        // Cluster/Debounce logic: If a notification is already showing, update text and reset timer
+        notificationHandler.removeCallbacks(hideNotificationRunnable);
+        tvNotificationText.setText(message);
+        
+        if (cardNotification.getVisibility() != View.VISIBLE) {
+            cardNotification.setVisibility(View.VISIBLE);
+            cardNotification.setAlpha(0f);
+            cardNotification.animate().alpha(1f).setDuration(300).start();
+        }
+
+        hideNotificationRunnable = () -> {
+            cardNotification.animate().alpha(0f).setDuration(500).withEndAction(() -> {
+                cardNotification.setVisibility(View.GONE);
+            }).start();
+        };
+        notificationHandler.postDelayed(hideNotificationRunnable, 5000); // Visible for 5 seconds
     }
 
     private void panToMyLocation() {
@@ -138,7 +206,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
             db.child("shuttles").child(shuttleId).child("currentLng").setValue(lng);
         }
         
-        // Also update local marker
         if (googleMap != null) {
             LatLng newLoc = new LatLng(lat, lng);
             if (driverMarker != null) {
@@ -147,7 +214,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 driverMarker = googleMap.addMarker(new MarkerOptions()
                         .position(newLoc)
                         .title(busName != null ? busName : "Shuttle")
-                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 32, 32)));
+                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
             }
         }
     }
@@ -157,7 +224,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 stopList.clear();
-                // Clear existing stop markers from the map
                 for (Marker marker : stopMarkers) {
                     marker.remove();
                 }
@@ -168,12 +234,11 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                     if (stop != null) {
                         StopItem item = new StopItem(
                                 stop.getStopName(),
-                                0, // Initial count
-                                324 // Placeholder distance
+                                0, 
+                                324
                         );
                         stopList.add(item);
                         
-                        // Add marker to map with initial label
                         if (googleMap != null) {
                             Marker stopMarker = googleMap.addMarker(new MarkerOptions()
                                     .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
@@ -184,17 +249,13 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                             }
                         }
 
-                        // Fetch actual waiting count from 'scans' node
                         fetchWaitingCount(stop.getStopName(), item);
                     }
                 }
                 stopAdapter.notifyDataSetChanged();
             }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(ShuttleStopActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
@@ -210,21 +271,23 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     }
 
     private void fetchWaitingCount(String stopName, StopItem item) {
-        String scanKey = stopName + "_com";
-        if (stopName.equalsIgnoreCase("SAFAD")) {
-            scanKey = "SAFAD Building_com";
-        } else if (stopName.equalsIgnoreCase("Bunzel")) {
-            scanKey = "Bunzel_com";
-        }
+        String scanKey = getScanKey(stopName);
         
         db.child("scans").child(scanKey).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 int count = (int) snapshot.getChildrenCount();
+                
+                // Clustering/Notification logic: check if count increased
+                Integer lastCount = lastKnownCounts.get(stopName);
+                if (lastCount != null && count > lastCount) {
+                    showPopUpNotification(count + " passengers waiting at " + stopName + " stop");
+                }
+                lastKnownCounts.put(stopName, count);
+
                 item.setWaitingCount(count);
                 stopAdapter.notifyDataSetChanged();
                 
-                // Update specific marker icon
                 if (googleMap != null) {
                     for (Marker marker : stopMarkers) {
                         if (item.equals(marker.getTag())) {
@@ -234,8 +297,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 }
             }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
@@ -252,7 +314,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         driverMarker = googleMap.addMarker(new MarkerOptions()
                 .position(shuttleLoc)
                 .title(busName != null ? busName : "Shuttle")
-                .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 32, 32)));
+                .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLoc, 16));
 
         refreshStopMarkers();
