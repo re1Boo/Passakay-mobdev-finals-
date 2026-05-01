@@ -47,6 +47,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private static final double USC_LAT = 10.3541;
     private static final double USC_LNG = 123.9115;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private static final float MAP_ZOOM_LEVEL = 18.5f;
 
     private MapView mapView;
     private GoogleMap googleMap;
@@ -122,7 +123,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private void panToMyLocation() {
         if (googleMap != null && userLat != 0 && userLng != 0) {
             LatLng myLoc = new LatLng(userLat, userLng);
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, 17));
+            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, MAP_ZOOM_LEVEL));
         } else {
             Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
         }
@@ -254,7 +255,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         }
         googleMap.getUiSettings().setZoomControlsEnabled(true);
         LatLng uscLocation = new LatLng(USC_LAT, USC_LNG);
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(uscLocation, 16));
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(uscLocation, MAP_ZOOM_LEVEL));
         loadStopsOnMap();
     }
 
@@ -293,21 +294,21 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
         }
         
-        // Use ic_person for user location - scaled to 32dp
+        // Use ic_person for user location - scaled to 28dp
         if (userLat != 0 && userLng != 0) {
             googleMap.addMarker(new MarkerOptions()
                     .position(new LatLng(userLat, userLng))
                     .title("My Location")
-                    .icon(bitmapDescriptorFromVector(this, R.drawable.ic_person, 32, 32)));
+                    .icon(bitmapDescriptorFromVector(this, R.drawable.ic_person, 28, 28)));
         }
 
-        // Use ic_shuttle for buses - scaled to 32dp
+        // Use ic_shuttle for buses - scaled to 28dp
         for (ShuttleItem shuttle : shuttleList) {
             if (shuttle.isAvailable()) {
                 googleMap.addMarker(new MarkerOptions()
                         .position(new LatLng(shuttle.getDriverLat(), shuttle.getDriverLng()))
                         .title(shuttle.getBusName())
-                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 32, 32)));
+                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
             }
         }
     }

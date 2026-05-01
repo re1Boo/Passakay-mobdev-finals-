@@ -56,6 +56,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     private static final double DEFAULT_LAT = 10.3541;
     private static final double DEFAULT_LNG = 123.9115;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1002;
+    private static final float MAP_ZOOM_LEVEL = 18.5f;
 
     private MapView mapView;
     private GoogleMap googleMap;
@@ -120,10 +121,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         new Handler(Looper.getMainLooper()).postDelayed(() -> isFirstLoad = false, 3000);
     }
 
-    /**
-     * PURPOSE: Clears the waiting list at the specified stop in Firebase.
-     * This "picks up" the passengers by deleting their scan records.
-     */
     private void pickUpPassengers(StopItem stopItem) {
         String stopName = stopItem.getStopName();
         String scanKey = getScanKey(stopName);
@@ -131,7 +128,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         db.child("scans").child(scanKey).removeValue()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Picked up all passengers at " + stopName, Toast.LENGTH_SHORT).show();
-                    // UI will update automatically via listeners
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Error during pickup: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
@@ -149,7 +145,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     private void showPopUpNotification(String message) {
         if (isFirstLoad) return;
         
-        // Cluster/Debounce logic: If a notification is already showing, update text and reset timer
         notificationHandler.removeCallbacks(hideNotificationRunnable);
         tvNotificationText.setText(message);
         
@@ -164,13 +159,13 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 cardNotification.setVisibility(View.GONE);
             }).start();
         };
-        notificationHandler.postDelayed(hideNotificationRunnable, 5000); // Visible for 5 seconds
+        notificationHandler.postDelayed(hideNotificationRunnable, 5000);
     }
 
     private void panToMyLocation() {
         if (googleMap != null && (driverLat != 0 || driverLng != 0)) {
             LatLng myLoc = new LatLng(driverLat, driverLng);
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, 17));
+            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, MAP_ZOOM_LEVEL));
         } else {
             Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
         }
@@ -235,7 +230,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                         StopItem item = new StopItem(
                                 stop.getStopName(),
                                 0, 
-                                324
+                                324 
                         );
                         stopList.add(item);
                         
@@ -278,7 +273,6 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 int count = (int) snapshot.getChildrenCount();
                 
-                // Clustering/Notification logic: check if count increased
                 Integer lastCount = lastKnownCounts.get(stopName);
                 if (lastCount != null && count > lastCount) {
                     showPopUpNotification(count + " passengers waiting at " + stopName + " stop");
@@ -315,7 +309,9 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 .position(shuttleLoc)
                 .title(busName != null ? busName : "Shuttle")
                 .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLoc, 16));
+        
+        // Increased zoom to campus level
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLoc, MAP_ZOOM_LEVEL));
 
         refreshStopMarkers();
     }
