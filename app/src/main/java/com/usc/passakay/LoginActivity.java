@@ -3,6 +3,7 @@ package com.usc.passakay;
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputType;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
@@ -43,7 +44,25 @@ public class LoginActivity extends BaseActivity {
         etPassword       = findViewById(R.id.etPassword);
         btnLogin         = findViewById(R.id.btnLogin);
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
-        ImageView imgLogo = findViewById(R.id.imgLogo);
+        ImageView imgMascot = findViewById(R.id.imgMascot);
+        ImageView ivTogglePassword = findViewById(R.id.ivTogglePassword);
+
+        final boolean[] isVisible = {false};
+        ivTogglePassword.setOnClickListener(v -> {
+            isVisible[0] = !isVisible[0];
+            if (isVisible[0]) {
+                etPassword.setInputType(
+                    InputType.TYPE_CLASS_TEXT |
+                    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+                ivTogglePassword.setImageResource(R.drawable.ic_eye_on);
+            } else {
+                etPassword.setInputType(
+                    InputType.TYPE_CLASS_TEXT |
+                    InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                ivTogglePassword.setImageResource(R.drawable.ic_eye_off);
+            }
+            etPassword.setSelection(etPassword.getText().length());
+        });
 
         btnLogin.setOnClickListener(v -> handleLogin());
 
@@ -51,7 +70,7 @@ public class LoginActivity extends BaseActivity {
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class))
         );
 
-        imgLogo.setOnClickListener(v -> {
+        imgMascot.setOnClickListener(v -> {
             tapCount++;
             if (tapCount >= SECRET_TAPS) {
                 tapCount = 0;
