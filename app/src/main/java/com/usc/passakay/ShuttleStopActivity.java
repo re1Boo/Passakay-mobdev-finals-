@@ -3,9 +3,12 @@ package com.usc.passakay;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Looper;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -144,7 +147,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 driverMarker = googleMap.addMarker(new MarkerOptions()
                         .position(newLoc)
                         .title(busName != null ? busName : "Shuttle")
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 32, 32)));
             }
         }
     }
@@ -163,23 +166,26 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 for (DataSnapshot stopSnapshot : snapshot.getChildren()) {
                     ShuttleStop stop = stopSnapshot.getValue(ShuttleStop.class);
                     if (stop != null) {
-                        int waiting = 0; // Placeholder
-                        stopList.add(new StopItem(
+                        StopItem item = new StopItem(
                                 stop.getStopName(),
-                                waiting,
+                                0, // Initial count
                                 324 // Placeholder distance
-                        ));
-
-                        // Add marker to map
+                        );
+                        stopList.add(item);
+                        
+                        // Add marker to map with initial label
                         if (googleMap != null) {
                             Marker stopMarker = googleMap.addMarker(new MarkerOptions()
                                     .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
-                                    .title(stop.getStopName())
-                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(createMarkerBitmap(item))));
                             if (stopMarker != null) {
+                                stopMarker.setTag(item);
                                 stopMarkers.add(stopMarker);
                             }
                         }
+
+                        // Fetch actual waiting count from 'scans' node
+                        fetchWaitingCount(stop.getStopName(), item);
                     }
                 }
                 stopAdapter.notifyDataSetChanged();
@@ -192,10 +198,52 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         });
     }
 
+    private Bitmap createMarkerBitmap(StopItem item) {
+        View markerView = getLayoutInflater().inflate(R.layout.marker_stop, null);
+        TextView tvName = markerView.findViewById(R.id.tvMarkerName);
+        TextView tvWaiting = markerView.findViewById(R.id.tvMarkerWaiting);
+        
+        tvName.setText(item.getStopName());
+        tvWaiting.setText(String.valueOf(item.getWaitingCount()));
+        
+        return getBitmapFromView(markerView);
+    }
+
+    private void fetchWaitingCount(String stopName, StopItem item) {
+        String scanKey = stopName + "_com";
+        if (stopName.equalsIgnoreCase("SAFAD")) {
+            scanKey = "SAFAD Building_com";
+        } else if (stopName.equalsIgnoreCase("Bunzel")) {
+            scanKey = "Bunzel_com";
+        }
+        
+        db.child("scans").child(scanKey).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                int count = (int) snapshot.getChildrenCount();
+                item.setWaitingCount(count);
+                stopAdapter.notifyDataSetChanged();
+                
+                // Update specific marker icon
+                if (googleMap != null) {
+                    for (Marker marker : stopMarkers) {
+                        if (item.equals(marker.getTag())) {
+                            marker.setIcon(BitmapDescriptorFactory.fromBitmap(createMarkerBitmap(item)));
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
     @Override
     public void onMapReady(GoogleMap map) {
         this.googleMap = map;
         MapsInitializer.initialize(this);
+        
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             googleMap.setMyLocationEnabled(true);
         }
@@ -204,16 +252,14 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         driverMarker = googleMap.addMarker(new MarkerOptions()
                 .position(shuttleLoc)
                 .title(busName != null ? busName : "Shuttle")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+                .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 32, 32)));
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLoc, 16));
 
-        // Redraw stops if they were already loaded
         refreshStopMarkers();
     }
 
     private void refreshStopMarkers() {
         if (googleMap == null) return;
-        // This is a bit redundant with loadStopsFromFirebase but handles the case where data loads before map is ready
         db.child("shuttleStops").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -225,12 +271,22 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                 for (DataSnapshot stopSnapshot : snapshot.getChildren()) {
                     ShuttleStop stop = stopSnapshot.getValue(ShuttleStop.class);
                     if (stop != null) {
-                        Marker stopMarker = googleMap.addMarker(new MarkerOptions()
-                                .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
-                                .title(stop.getStopName())
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
-                        if (stopMarker != null) {
-                            stopMarkers.add(stopMarker);
+                        StopItem matchedItem = null;
+                        for (StopItem item : stopList) {
+                            if (item.getStopName().equals(stop.getStopName())) {
+                                matchedItem = item;
+                                break;
+                            }
+                        }
+
+                        if (matchedItem != null) {
+                            Marker stopMarker = googleMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
+                                    .icon(BitmapDescriptorFactory.fromBitmap(createMarkerBitmap(matchedItem))));
+                            if (stopMarker != null) {
+                                stopMarker.setTag(matchedItem);
+                                stopMarkers.add(stopMarker);
+                            }
                         }
                     }
                 }

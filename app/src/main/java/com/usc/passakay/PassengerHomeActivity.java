@@ -293,20 +293,21 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
         }
         
-        // Show current user location as a RED DOT (using standard red marker)
+        // Use ic_person for user location - scaled to 32dp
         if (userLat != 0 && userLng != 0) {
             googleMap.addMarker(new MarkerOptions()
                     .position(new LatLng(userLat, userLng))
                     .title("My Location")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                    .icon(bitmapDescriptorFromVector(this, R.drawable.ic_person, 32, 32)));
         }
 
+        // Use ic_shuttle for buses - scaled to 32dp
         for (ShuttleItem shuttle : shuttleList) {
             if (shuttle.isAvailable()) {
                 googleMap.addMarker(new MarkerOptions()
                         .position(new LatLng(shuttle.getDriverLat(), shuttle.getDriverLng()))
                         .title(shuttle.getBusName())
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 32, 32)));
             }
         }
     }

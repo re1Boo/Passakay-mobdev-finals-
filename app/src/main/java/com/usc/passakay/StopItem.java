@@ -17,4 +17,13 @@ public class StopItem {
     public int getWaitingCount()     { return waitingCount; }
     public int getDistanceMeters()   { return distanceMeters; }
     public boolean isHasWaiting()    { return hasWaiting; }
+
+    public void setWaitingCount(int waitingCount) {
+        this.waitingCount = waitingCount;
+        this.hasWaiting = waitingCount > 0;
+    }
+
+    public void setDistanceMeters(int distanceMeters) {
+        this.distanceMeters = distanceMeters;
+    }
 }
