@@ -8,7 +8,6 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -129,9 +128,9 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
 
     private void pickUpPassengers(StopItem stopItem) {
         String stopName = stopItem.getStopName();
-        String scanKey = getScanKey(stopName);
+        String scanKeyForPickup = getScanKey(stopName);
         
-        db.child("scans").child(scanKey).removeValue()
+        db.child("scans").child(scanKeyForPickup).removeValue()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Picked up all passengers at " + stopName, Toast.LENGTH_SHORT).show();
                     // Also clear waiting status for individual users matched to this stop if needed
@@ -140,13 +139,13 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     }
 
     private String getScanKey(String stopName) {
-        String scanKey = stopName.replace(".", "_").replace(" ", "_") + "_com";
+        String key = stopName.replace(".", "_").replace(" ", "_") + "_com";
         if (stopName.equalsIgnoreCase("SAFAD")) {
-            scanKey = "SAFAD Building_com";
+            key = "SAFAD Building_com";
         } else if (stopName.equalsIgnoreCase("Bunzel")) {
-            scanKey = "Bunzel_com";
+            key = "Bunzel_com";
         }
-        return scanKey;
+        return key;
     }
 
     private void showPopUpNotification(String message) {
@@ -191,6 +190,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
+                if (locationResult == null) return;
                 for (Location location : locationResult.getLocations()) {
                     driverLat = location.getLatitude();
                     driverLng = location.getLongitude();
