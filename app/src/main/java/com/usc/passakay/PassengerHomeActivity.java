@@ -8,6 +8,8 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,6 +60,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private MaterialButton btnWaitingStatus;
     private TextView tvAnnouncement, tvUserLoc;
     private boolean isWaiting = false;
+    private String lastDismissedAnnouncementId = "";
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -104,9 +107,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
         // Load Announcements
         loadAnnouncements();
-        if (findViewById(R.id.cardAnnouncement) != null) {
-            findViewById(R.id.cardAnnouncement).setOnClickListener(v -> showAnnouncementHistory());
-        }
 
         // Load all shuttles
         loadShuttles();
@@ -218,6 +218,22 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     }
 
     private void loadAnnouncements() {
+        View card = findViewById(R.id.cardAnnouncement);
+        View btnDismiss = findViewById(R.id.ivDismissAnnouncement);
+        
+        if (btnDismiss != null && card != null) {
+            btnDismiss.setOnClickListener(v -> {
+                Log.d("Announcement", "Dismiss clicked. Message: " + (tvAnnouncement != null ? tvAnnouncement.getText() : "null"));
+                card.setVisibility(View.GONE);
+                if (tvAnnouncement != null) {
+                    lastDismissedAnnouncementId = tvAnnouncement.getText().toString();
+                }
+            });
+            
+            // Also allow clicking the card to see history
+            card.setOnClickListener(v -> showAnnouncementHistory());
+        }
+
         db.child("announcements").child("current").addValueEventListener(new ValueEventListener() {
             private String lastMessage = "";
 
@@ -229,23 +245,36 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
 
                     if (expiresAt != null && System.currentTimeMillis() > expiresAt) {
-                        if (findViewById(R.id.cardAnnouncement) != null)
-                            findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                        if (card != null) card.setVisibility(View.GONE);
                         return;
                     }
 
+                    // Reset dismissal if it's a completely NEW message compared to the last one we saw
                     if (message != null && !message.equals(lastMessage)) {
+                        lastDismissedAnnouncementId = "";
+                        lastMessage = message;
+                        
+                        // Vibrate for new messages
                         android.os.Vibrator v = (android.os.Vibrator) getSystemService(android.content.Context.VIBRATOR_SERVICE);
                         if (v != null) v.vibrate(300);
-                        lastMessage = message;
+                    }
+
+                    // If user manually dismissed THIS exact message, keep it hidden
+                    if (message != null && message.equals(lastDismissedAnnouncementId)) {
+                        Log.d("Announcement", "Keeping hidden because it was manually dismissed.");
+                        if (card != null) card.setVisibility(View.GONE);
+                        return;
                     }
 
                     if (tvAnnouncement != null) {
                         tvAnnouncement.setText(message);
                         tvAnnouncement.setSelected(true);
                     }
-                    if (findViewById(R.id.cardAnnouncement) != null)
-                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.VISIBLE);
+                    
+                    if (card != null) {
+                        Log.d("Announcement", "Showing announcement card.");
+                        card.setVisibility(View.VISIBLE);
+                    }
 
                     long currentTimestamp = snapshot.child("timestamp").getValue(Long.class) != null ? snapshot.child("timestamp").getValue(Long.class) : 0;
                     if (findViewById(R.id.tvNewBadge) != null) {
@@ -261,20 +290,20 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                         tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(currentTimestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
                     }
 
-                    androidx.cardview.widget.CardView card = findViewById(R.id.cardAnnouncement);
-                    if (card != null) {
+                    if (card instanceof androidx.cardview.widget.CardView) {
+                        androidx.cardview.widget.CardView cardView = (androidx.cardview.widget.CardView) card;
                         if ("warning".equals(priority)) {
-                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2")); 
+                            cardView.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2")); 
                         } else if ("emergency".equals(priority)) {
-                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2")); 
+                            cardView.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2")); 
                             android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
                             pulse.setDuration(800);
                             pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
                             pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
-                            card.startAnimation(pulse);
+                            cardView.startAnimation(pulse);
                         } else {
-                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4")); 
-                            card.clearAnimation();
+                            cardView.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4")); 
+                            cardView.clearAnimation();
                         }
                     }
                 } else {

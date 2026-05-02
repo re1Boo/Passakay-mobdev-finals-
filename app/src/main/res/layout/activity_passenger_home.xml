@@ -262,6 +262,18 @@
                         android:fontFamily="@font/kanit"
                         android:layout_marginStart="8dp"/>
 
+                    <ImageView
+                        android:id="@+id/ivDismissAnnouncement"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:layout_marginStart="4dp"
+                        android:padding="12dp"
+                        app:tint="#8D6E63"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"/>
+
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
