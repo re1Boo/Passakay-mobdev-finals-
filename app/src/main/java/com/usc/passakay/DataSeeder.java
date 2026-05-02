@@ -13,7 +13,6 @@ public class DataSeeder {
     private static final String TAG = "DataSeeder";
 
     public DataSeeder() {
-        // Explicitly using the database URL from your google-services.json
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
         mAuth = FirebaseAuth.getInstance();
     }
@@ -72,7 +71,6 @@ public class DataSeeder {
                 new Course(26, "Juris Doctor"),
                 new Course(27, "BS Nursing"),
                 new Course(28, "BS Pharmacy"),
-                new Course(29, "BS Biology"),
                 new Course(30, "BS Chemistry"),
                 new Course(31, "BS Physics"),
                 new Course(32, "BS Mathematics"),
@@ -99,9 +97,14 @@ public class DataSeeder {
     private void seedShuttles() {
         Shuttle[] shuttles = {
                 new Shuttle(1, "ABC 1234"),
-                new Shuttle(2, "XYZ 5678")
+                new Shuttle(2, "XYZ 5678"),
+                new Shuttle(3, "GWX-101"),
+                new Shuttle(4, "GWX-102"),
+                new Shuttle(5, "GWX-103")
         };
         for (Shuttle shuttle : shuttles) {
+            shuttle.setCapacity(30);
+            shuttle.setDeviceId("");
             db.child("shuttles").child(String.valueOf(shuttle.getShuttleId())).setValue(shuttle)
                     .addOnSuccessListener(a -> Log.d(TAG, "Shuttle seeded: " + shuttle.getPlateNumber()))
                     .addOnFailureListener(e -> Log.e(TAG, "Shuttle seed failed: " + e.getMessage()));
@@ -129,44 +132,51 @@ public class DataSeeder {
     }
 
     private void seedUsers() {
-        createUser("driver@passakay.com", "password123", "20000001", "driver");
-        createUser("passenger@passakay.com", "password123", "21101234", "passenger");
-        // Admin user
-        createUser("admin@passakay.com", "admin123456", "00000001", "admin");
+        // Admin
+        createUser("admin@passakay.com", "admin123456", "00000001", "admin", -1);
+        
+        // Drivers - Assigned to Shuttle 1 and 2
+        createUser("driver@passakay.com", "password123", "20000001", "driver", 1);
+        createUser("driver1@passakay.com", "password123", "D001", "driver", 1);
+        createUser("driver2@passakay.com", "password123", "D002", "driver", 2);
+        
+        // Passenger
+        createUser("passenger@passakay.com", "password123", "21101234", "passenger", -1);
     }
 
-    private void createUser(String email, String password, String studentId, String role) {
+    private void createUser(String email, String password, String studentId, String role, int assignedShuttleId) {
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
-                    String uid = authResult.getUser().getUid();
-                    saveUserData(uid, email, studentId, role);
+                    saveUserData(authResult.getUser().getUid(), email, studentId, role, assignedShuttleId);
                 })
                 .addOnFailureListener(e -> {
                     if (e instanceof FirebaseAuthUserCollisionException) {
                         Log.d(TAG, "User already exists in Auth: " + email + ". Updating database data...");
                         mAuth.signInWithEmailAndPassword(email, password)
                                 .addOnSuccessListener(authResult -> {
-                                    saveUserData(authResult.getUser().getUid(), email, studentId, role);
+                                    saveUserData(authResult.getUser().getUid(), email, studentId, role, assignedShuttleId);
                                 })
                                 .addOnFailureListener(err -> Log.e(TAG, "Sign in failed for " + email + ": " + err.getMessage()));
                     } else {
                         Log.e(TAG, "Failed to create user " + email + ": " + e.getMessage());
-                        Log.e(TAG, "Check if SHA-1 is added to Firebase and reCAPTCHA enforcement is configured.");
                     }
                 });
     }
 
-    private void saveUserData(String uid, String email, String studentId, String role) {
+    private void saveUserData(String uid, String email, String studentId, String role, int assignedShuttleId) {
         User user = new User();
         user.setEmail(email);
         user.setStudentId(studentId);
         user.setRole(role);
         user.setStatus("active");
+        user.setFirstName(role.substring(0, 1).toUpperCase() + role.substring(1));
+        user.setLastName("User");
+        user.setAssignedShuttleId(assignedShuttleId);
         user.setDepartmentId(1);
         user.setCourseId(1);
 
         db.child("users").child(uid).setValue(user)
-                .addOnSuccessListener(a -> Log.d(TAG, "User data saved to DB: " + email))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to save user data to DB: " + e.getMessage()));
+                .addOnSuccessListener(a -> Log.d(TAG, "User seeded: " + email))
+                .addOnFailureListener(e -> Log.e(TAG, "Seed failed: " + e.getMessage()));
     }
 }

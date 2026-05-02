@@ -1,15 +1,34 @@
 package com.usc.passakay;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -19,24 +38,34 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class PassengerHomeActivity extends BaseActivity {
+public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCallback {
 
     private static final double USC_LAT = 10.3541;
     private static final double USC_LNG = 123.9115;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private static final float MAP_ZOOM_LEVEL = 18.5f;
 
+    private MapView mapView;
+    private GoogleMap googleMap;
     private RecyclerView recyclerShuttles;
     private ShuttleAdapter shuttleAdapter;
     private List<ShuttleItem> shuttleList = new ArrayList<>();
     private DatabaseReference db;
     private MaterialButton btnWaitingStatus;
-    private TextView tvAnnouncement;
+    private TextView tvAnnouncement, tvUserLoc;
     private boolean isWaiting = false;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
+    private double userLat = 0, userLng = 0;
+
+    private List<ShuttleStop> allStops = new ArrayList<>();
+    private Handler stopUpdateHandler = new Handler(Looper.getMainLooper());
+    private Runnable stopUpdateRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,17 +73,23 @@ public class PassengerHomeActivity extends BaseActivity {
         setContentView(R.layout.activity_passenger_home);
 
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         // UI Elements
         btnWaitingStatus = findViewById(R.id.btnWaitingStatus);
         tvAnnouncement = findViewById(R.id.tvAnnouncement);
+        tvUserLoc = findViewById(R.id.tvUserLoc);
         FloatingActionButton fabScanQR = findViewById(R.id.fabScanQR);
+        FloatingActionButton fabMyLocation = findViewById(R.id.fabMyLocation);
+
+        // Setup Map
+        mapView = findViewById(R.id.mapViewMain);
+        mapView.onCreate(savedInstanceState);
+        mapView.getMapAsync(this);
 
         // Setup RecyclerView
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
-
-        // ✅ Pass getSupportFragmentManager() so maps can load
         shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
         recyclerShuttles.setAdapter(shuttleAdapter);
 
@@ -64,74 +99,100 @@ public class PassengerHomeActivity extends BaseActivity {
         // QR Scan FAB
         fabScanQR.setOnClickListener(v -> startQRScanner());
 
+        // My Location FAB
+        fabMyLocation.setOnClickListener(v -> panToMyLocation());
+
         // Load Announcements
         loadAnnouncements();
-
-        // Click on announcement to see history
-        findViewById(R.id.cardAnnouncement).setOnClickListener(v -> showAnnouncementHistory());
+        if (findViewById(R.id.cardAnnouncement) != null) {
+            findViewById(R.id.cardAnnouncement).setOnClickListener(v -> showAnnouncementHistory());
+        }
 
         // Load all shuttles
         loadShuttles();
 
         // Setup bottom nav
         setupBottomNav();
+
+        // Start location updates
+        startLocationUpdates();
+
+        // Initialize nearest stop update runnable
+        stopUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                updateNearestStop();
+                stopUpdateHandler.postDelayed(this, 10000); // 10 seconds
+            }
+        };
+    }
+
+    private void panToMyLocation() {
+        if (googleMap != null && userLat != 0 && userLng != 0) {
+            LatLng myLoc = new LatLng(userLat, userLng);
+            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, MAP_ZOOM_LEVEL));
+        } else {
+            Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+            return;
+        }
+
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+                .setMinUpdateIntervalMillis(2000)
+                .build();
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                for (Location location : locationResult.getLocations()) {
+                    updateUserLocationInDB(location.getLatitude(), location.getLongitude());
+                }
+            }
+        };
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+    }
+
+    private void updateUserLocationInDB(double lat, double lng) {
+        this.userLat = lat;
+        this.userLng = lng;
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid != null) {
+            db.child("users").child(uid).child("currentLat").setValue(lat);
+            db.child("users").child(uid).child("currentLng").setValue(lng);
+        }
+        updateMapMarkers(); 
+        updateNearestStop(); 
+    }
+
+    private void updateNearestStop() {
+        if (allStops.isEmpty() || userLat == 0 || userLng == 0) return;
+
+        ShuttleStop nearest = null;
+        float minDistance = Float.MAX_VALUE;
+
+        for (ShuttleStop stop : allStops) {
+            float[] results = new float[1];
+            Location.distanceBetween(userLat, userLng, stop.getLatitude(), stop.getLongitude(), results);
+            if (results[0] < minDistance) {
+                minDistance = results[0];
+                nearest = stop;
+            }
+        }
+
+        if (nearest != null && tvUserLoc != null) {
+            tvUserLoc.setText(nearest.getStopName());
+        }
     }
 
     private void startQRScanner() {
-        IntentIntegrator integrator = new IntentIntegrator(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt("Scan a shuttle stop QR code");
-        integrator.setCameraId(0);  // Use a specific camera of the device
-        integrator.setBeepEnabled(true);
-        integrator.setBarcodeImageEnabled(true);
-        integrator.setOrientationLocked(false);
-        integrator.initiateScan();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-        if (result != null) {
-            if (result.getContents() == null) {
-                Toast.makeText(this, "Cancelled", Toast.LENGTH_LONG).show();
-            } else {
-                handleQRResult(result.getContents());
-            }
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
-        }
-    }
-
-    private void handleQRResult(String contents) {
-        // Assume the QR code contains the stop ID or name
-        Toast.makeText(this, "Scanned: " + contents, Toast.LENGTH_LONG).show();
-        
-        // Example: Auto-toggle waiting status if they scan a stop
-        if (!isWaiting) {
-            toggleWaitingStatus();
-        }
-        
-        // Update to match the "scans" structure shown in your friend's screenshot
-        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        
-        // 1. Update user's own record
-        db.child("users").child(uid).child("lastScannedStop").setValue(contents);
-        db.child("users").child(uid).child("waitingAt").setValue(contents); // Added for consistency
-        db.child("users").child(uid).child("isWaiting").setValue(true);
-
-        // 2. Update the "scans" node
-        // Replace dots with underscores for node keys (e.g., BUNZEL.com -> BUNZEL_com)
-        String scanNode = contents.replace(".", "_"); 
-        String scanId = db.child("scans").child(scanNode).push().getKey();
-        
-        java.util.Map<String, Object> scanData = new java.util.HashMap<>();
-        scanData.put("passengerUid", uid);
-        scanData.put("qrContent", contents);
-        scanData.put("timestamp", System.currentTimeMillis());
-
-        if (scanId != null) {
-            db.child("scans").child(scanNode).child(scanId).setValue(scanData);
-        }
+        Intent intent = new Intent(this, ScannerActivity.class);
+        startActivity(intent);
     }
 
     private void toggleWaitingStatus() {
@@ -150,8 +211,10 @@ public class PassengerHomeActivity extends BaseActivity {
     }
 
     private void updateWaitingStatusInDB(boolean waiting) {
-        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        db.child("users").child(uid).child("isWaiting").setValue(waiting);
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid != null) {
+            db.child("users").child(uid).child("isWaiting").setValue(waiting);
+        }
     }
 
     private void loadAnnouncements() {
@@ -165,63 +228,58 @@ public class PassengerHomeActivity extends BaseActivity {
                     String priority = snapshot.child("priority").getValue(String.class);
                     Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
 
-                    // Check for expiry
                     if (expiresAt != null && System.currentTimeMillis() > expiresAt) {
-                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                        if (findViewById(R.id.cardAnnouncement) != null)
+                            findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
                         return;
                     }
 
-                    // Vibrate if it's a new message
                     if (message != null && !message.equals(lastMessage)) {
                         android.os.Vibrator v = (android.os.Vibrator) getSystemService(android.content.Context.VIBRATOR_SERVICE);
                         if (v != null) v.vibrate(300);
                         lastMessage = message;
                     }
 
-                    tvAnnouncement.setText(message);
-                    tvAnnouncement.setSelected(true);
-                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.VISIBLE);
+                    if (tvAnnouncement != null) {
+                        tvAnnouncement.setText(message);
+                        tvAnnouncement.setSelected(true);
+                    }
+                    if (findViewById(R.id.cardAnnouncement) != null)
+                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.VISIBLE);
 
-                    // Show "NEW" badge if less than 2 minutes old
                     long currentTimestamp = snapshot.child("timestamp").getValue(Long.class) != null ? snapshot.child("timestamp").getValue(Long.class) : 0;
-                    if (currentTimestamp > 0 && (System.currentTimeMillis() - currentTimestamp) < (2 * 60 * 1000)) {
-                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.VISIBLE);
-                    } else {
-                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.GONE);
+                    if (findViewById(R.id.tvNewBadge) != null) {
+                        if (currentTimestamp > 0 && (System.currentTimeMillis() - currentTimestamp) < (2 * 60 * 1000)) {
+                            findViewById(R.id.tvNewBadge).setVisibility(android.view.View.VISIBLE);
+                        } else {
+                            findViewById(R.id.tvNewBadge).setVisibility(android.view.View.GONE);
+                        }
                     }
 
-                    // Show relative time in the banner
-                    if (currentTimestamp > 0) {
+                    if (currentTimestamp > 0 && findViewById(R.id.tvAnnouncementTime) != null) {
                         TextView tvTime = findViewById(R.id.tvAnnouncementTime);
                         tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(currentTimestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
                     }
 
-                    // Show relative time in the banner
-                    Long timestamp = snapshot.child("timestamp").getValue(Long.class);
-                    if (timestamp != null) {
-                        TextView tvTime = findViewById(R.id.tvAnnouncementTime);
-                        tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(timestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
-                    }
-
-                    // Change color based on priority
                     androidx.cardview.widget.CardView card = findViewById(R.id.cardAnnouncement);
-                    if ("warning".equals(priority)) {
-                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2")); // Orange tint
-                    } else if ("emergency".equals(priority)) {
-                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2")); // Red tint
-                        
-                        // Suggestion: Pulsing Animation for Emergency
-                        android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
-                        pulse.setDuration(800);
-                        pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
-                        pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
-                        card.startAnimation(pulse);
-                    } else {
-                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4")); // Yellow tint
-                        card.clearAnimation();
+                    if (card != null) {
+                        if ("warning".equals(priority)) {
+                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2")); 
+                        } else if ("emergency".equals(priority)) {
+                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2")); 
+                            android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
+                            pulse.setDuration(800);
+                            pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
+                            pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
+                            card.startAnimation(pulse);
+                        } else {
+                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4")); 
+                            card.clearAnimation();
+                        }
                     }
                 } else {
-                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                    if (findViewById(R.id.cardAnnouncement) != null)
+                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
                 }
             }
 
@@ -239,7 +297,7 @@ public class PassengerHomeActivity extends BaseActivity {
                 java.util.List<java.util.Map<String, Object>> historyData = new java.util.ArrayList<>();
                 for (DataSnapshot ds : snapshot.getChildren()) {
                     java.util.Map<String, Object> map = (java.util.Map<String, Object>) ds.getValue();
-                    if (map != null) historyData.add(0, map); // Latest first
+                    if (map != null) historyData.add(0, map); 
                 }
 
                 AnnouncementHistoryAdapter adapter = new AnnouncementHistoryAdapter(PassengerHomeActivity.this, historyData, null);
@@ -262,12 +320,7 @@ public class PassengerHomeActivity extends BaseActivity {
     private void loadShuttles() {
         db.child("shuttles").addValueEventListener(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (!snapshot.exists()) {
-                    populateInitialData();
-                    return;
-                }
-
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
                 shuttleList.clear();
                 for (DataSnapshot child : snapshot.getChildren()) {
                     Shuttle shuttle = child.getValue(Shuttle.class);
@@ -276,39 +329,92 @@ public class PassengerHomeActivity extends BaseActivity {
                         double lng = (shuttle.getCurrentLng() != 0) ? shuttle.getCurrentLng() : USC_LNG;
 
                         ShuttleItem item = new ShuttleItem(
-                            String.valueOf(shuttle.getShuttleId()),
-                            "Bus " + shuttle.getShuttleId(),
-                            shuttle.getDriverName() != null ? shuttle.getDriverName() : "No Driver",
-                            shuttle.getPlateNumber(),
-                            shuttle.isActive() ? calculateETA(lat, lng) : 0,
-                            shuttle.isActive(),
-                            lat,
-                            lng
+                                String.valueOf(shuttle.getShuttleId()),
+                                "Bus " + shuttle.getShuttleId(),
+                                shuttle.getDriverName() != null ? shuttle.getDriverName() : "No Driver",
+                                shuttle.getPlateNumber(),
+                                shuttle.isActive() ? calculateETA(lat, lng) : 0,
+                                shuttle.isActive(),
+                                lat,
+                                lng
                         );
-                        item.setCurrentPassengers(shuttle.getCurrentPassengers());
-                        item.setCapacity(shuttle.getCapacity() > 0 ? shuttle.getCapacity() : 30);
-                        item.setLastUpdated(shuttle.getLastUpdated() != null ? shuttle.getLastUpdated() : "Offline");
-                        
                         shuttleList.add(item);
                     }
                 }
                 shuttleAdapter.notifyDataSetChanged();
+                updateMapMarkers();
             }
 
             @Override
-            public void onCancelled(DatabaseError error) {}
+            public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    private void populateInitialData() {
-        db.child("shuttles").child("1").setValue(new Shuttle(1, "GWX-101"));
-        db.child("shuttles").child("2").setValue(new Shuttle(2, "GWX-102"));
-        db.child("shuttles").child("3").setValue(new Shuttle(3, "GWX-103"));
+    private int calculateETA(double lat, double lng) {
+        return (int)(Math.random() * 8) + 2;
     }
 
-    private int calculateETA(double lat, double lng) {
-        if (lat == 0) return 0;
-        return (int)(Math.random() * 8) + 2;
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        this.googleMap = googleMap;
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            googleMap.setMyLocationEnabled(true);
+        }
+        googleMap.getUiSettings().setZoomControlsEnabled(true);
+        LatLng uscLocation = new LatLng(USC_LAT, USC_LNG);
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(uscLocation, MAP_ZOOM_LEVEL));
+        loadStopsOnMap();
+    }
+
+    private void loadStopsOnMap() {
+        db.child("shuttleStops").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                allStops.clear();
+                for (DataSnapshot stopSnapshot : snapshot.getChildren()) {
+                    ShuttleStop stop = stopSnapshot.getValue(ShuttleStop.class);
+                    if (stop != null) {
+                        allStops.add(stop);
+                        if (googleMap != null) {
+                            googleMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
+                                    .title(stop.getStopName())
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                        }
+                    }
+                }
+                updateNearestStop();
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
+    private void updateMapMarkers() {
+        if (googleMap == null) return;
+        googleMap.clear();
+        for (ShuttleStop stop : allStops) {
+            googleMap.addMarker(new MarkerOptions()
+                    .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
+                    .title(stop.getStopName())
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+        }
+        
+        if (userLat != 0 && userLng != 0) {
+            googleMap.addMarker(new MarkerOptions()
+                    .position(new LatLng(userLat, userLng))
+                    .title("My Location")
+                    .icon(bitmapDescriptorFromVector(this, R.drawable.ic_person, 28, 28)));
+        }
+
+        for (ShuttleItem shuttle : shuttleList) {
+            if (shuttle.isAvailable()) {
+                googleMap.addMarker(new MarkerOptions()
+                        .position(new LatLng(shuttle.getDriverLat(), shuttle.getDriverLng()))
+                        .title(shuttle.getBusName())
+                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
+            }
+        }
     }
 
     private void setupBottomNav() {
@@ -318,14 +424,40 @@ public class PassengerHomeActivity extends BaseActivity {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 return true;
-            } else if (id == R.id.nav_history) {
-                return true;
             } else if (id == R.id.nav_profile) {
-                Intent intent = new Intent(this, ProfileActivity.class);
-                startActivity(intent);
+                startActivity(new Intent(this, ProfileActivity.class));
                 return true;
             }
             return false;
         });
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startLocationUpdates();
+            }
+        }
+    }
+
+    @Override protected void onResume() { 
+        super.onResume(); 
+        if (mapView != null) mapView.onResume();
+        stopUpdateHandler.post(stopUpdateRunnable);
+    }
+
+    @Override protected void onPause() { 
+        super.onPause(); 
+        if (mapView != null) { 
+            mapView.onPause(); 
+            if (fusedLocationClient != null && locationCallback != null)
+                fusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+        stopUpdateHandler.removeCallbacks(stopUpdateRunnable);
+    }
+
+    @Override protected void onDestroy() { super.onDestroy(); if (mapView != null) mapView.onDestroy(); }
+    @Override public void onLowMemory() { super.onLowMemory(); if (mapView != null) mapView.onLowMemory(); }
 }

@@ -4,11 +4,12 @@ public class Shuttle {
     private int shuttleId;
     private int capacity;
     private String plateNumber;
-    private String status = "Standby"; // Default value
-    private String driverName = "No driver"; // Default value
-    private String driverId = ""; // Default value
+    private String status; // "Deployed", "Standby", "Unavailable"
+    private String driverName;
+    private String driverId; // To track which driver is currently using this shuttle
+    private String deviceId; // Unique ID of the physical phone assigned to this shuttle
     private boolean active;
-    private String currentDriverId;
+
     private double currentLat;
     private double currentLng;
     private int currentPassengers;
@@ -23,6 +24,7 @@ public class Shuttle {
         this.driverName = "No driver";
         this.driverId = "";
         this.active = false;
+        this.deviceId = "";
     }
 
     public int getShuttleId() { return shuttleId; }
@@ -34,24 +36,23 @@ public class Shuttle {
     public int getCapacity() { return capacity; }
     public void setCapacity(int capacity){ this.capacity = capacity; }
 
-    public String getStatus() { 
-        return (status == null || status.isEmpty()) ? "Standby" : status; 
-    }
+    public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public String getDriverName() { 
-        return (driverName == null || driverName.isEmpty()) ? "No driver" : driverName; 
-    }
+    public String getDriverName() { return driverName; }
+
+    public String getDeviceId() {return deviceId; }
+
+    public boolean isActive() {return active; }
     public void setDriverName(String driverName) { this.driverName = driverName; }
 
     public String getDriverId() { return driverId; }
     public void setDriverId(String driverId) { this.driverId = driverId; }
 
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
 
-    public String getCurrentDriverId() { return currentDriverId; }
-    public void setCurrentDriverId(String currentDriverId) { this.currentDriverId = currentDriverId; }
+    public void setDeviceId(String deviceId) {this.deviceId = deviceId;}
+
+    public void setActive(boolean active) {this.active = active;}
 
     public double getCurrentLat() { return currentLat; }
     public void setCurrentLat(double currentLat) { this.currentLat = currentLat; }
@@ -64,4 +65,5 @@ public class Shuttle {
 
     public String getLastUpdated() { return lastUpdated; }
     public void setLastUpdated(String lastUpdated) { this.lastUpdated = lastUpdated; }
+
 }

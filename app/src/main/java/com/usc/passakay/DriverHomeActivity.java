@@ -53,6 +53,7 @@ public class DriverHomeActivity extends BaseActivity {
         
         // Fixed: Pass getSupportFragmentManager() as the third argument
         shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
+
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         btnEndTrip = findViewById(R.id.btnEndTrip);

@@ -27,15 +27,21 @@ import java.util.Set;
 
 public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder> {
 
+    public interface OnPickUpClickListener {
+        void onPickUp(StopItem item);
+    }
+
     private final Context context;
     private final List<StopItem> stopList;
     private final DatabaseReference db;
     private final Set<Integer> expandedPositions = new HashSet<>();
+    private final OnPickUpClickListener pickUpListener;
 
-    public StopAdapter(Context context, List<StopItem> stopList) {
+    public StopAdapter(Context context, List<StopItem> stopList, OnPickUpClickListener listener) {
         this.context  = context;
         this.stopList = stopList;
         this.db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+        this.pickUpListener = listener;
     }
 
     @NonNull
@@ -89,7 +95,12 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
             }
         });
 
-        holder.btnPickUp.setOnClickListener(v -> clearWaitingStatusAtStop(stop.getStopName()));
+        holder.btnPickUp.setOnClickListener(v -> {
+            if (pickUpListener != null) {
+                pickUpListener.onPickUp(stop);
+            }
+            clearWaitingStatusAtStop(stop.getStopName());
+        });
     }
 
     private void loadPassengersForStop(String stopName, RecyclerView rv) {
@@ -127,7 +138,7 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
                         ds.getRef().child("waitingAt").setValue("");
                     }
                 }
-                Toast.makeText(context, "Passengers picked up!", Toast.LENGTH_SHORT).show();
+                // No need for Toast here as Reilly's listener handles it
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {}
         });

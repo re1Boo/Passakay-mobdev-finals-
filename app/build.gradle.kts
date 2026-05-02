@@ -46,7 +46,8 @@ dependencies {
     implementation(libs.firebase.storage)     // ← Firebase Storage
 
     // Google Maps
-    implementation(libs.play.services.maps)   // ← keep only this one
+    implementation(libs.play.services.maps)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 
     implementation(libs.circleimageview)
     implementation(libs.glide)
@@ -57,7 +58,8 @@ dependencies {
     
     // ML Kit Barcode Scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
-    
+    implementation(libs.play.services.location)
+
     // CameraX
     val cameraxVersion = "1.3.4"
     implementation("androidx.camera:camera-core:$cameraxVersion")

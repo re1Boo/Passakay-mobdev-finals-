@@ -42,6 +42,7 @@ public class ProfileActivity extends BaseActivity {
     private boolean isPasswordVisible = false;
     private String userRole = "";
     private String currentUid = "";
+    private String userStudentId = "";
 
     private final ActivityResultLauncher<String> imagePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
@@ -107,6 +108,7 @@ public class ProfileActivity extends BaseActivity {
                 User user = snapshot.getValue(User.class);
                 if (user != null) {
                     userRole = user.getRole();
+                    userStudentId = user.getStudentId();
                     tvFullName.setText(user.getFirstName() + " " + user.getLastName());
                     tvRole.setText(capitalize(user.getRole()));
                     tvStudentId.setText("ID Number: " + user.getStudentId());
@@ -142,24 +144,19 @@ public class ProfileActivity extends BaseActivity {
 
         new Thread(() -> {
             try {
-                // 1. Convert Uri to Bitmap
                 InputStream imageStream = getContentResolver().openInputStream(uri);
                 Bitmap originalBitmap = BitmapFactory.decodeStream(imageStream);
 
-                // 2. Resize Bitmap (Important to keep DB small!)
                 int width = 200;
                 int height = (int) (originalBitmap.getHeight() * (200.0 / originalBitmap.getWidth()));
                 Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true);
 
-                // 3. Compress to JPEG
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
                 byte[] b = baos.toByteArray();
 
-                // 4. Encode to Base64 String
                 String encodedImage = Base64.encodeToString(b, Base64.DEFAULT);
 
-                // 5. Save string to Realtime Database
                 runOnUiThread(() -> {
                     db.child("users").child(currentUid).child("profileImageUrl").setValue(encodedImage)
                             .addOnSuccessListener(aVoid -> {
@@ -235,9 +232,14 @@ public class ProfileActivity extends BaseActivity {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 Intent intent;
-                if ("driver".equals(userRole)) intent = new Intent(this, DriverDashboardActivity.class);
-                else if ("admin".equals(userRole)) intent = new Intent(this, AdminDashboardActivity.class);
-                else intent = new Intent(this, PassengerHomeActivity.class);
+                if ("driver".equals(userRole) || "bus".equals(userRole)) {
+                    // Logic to find assigned shuttle
+                    intent = new Intent(this, DriverDashboardActivity.class);
+                } else if ("admin".equals(userRole)) {
+                    intent = new Intent(this, AdminDashboardActivity.class);
+                } else {
+                    intent = new Intent(this, PassengerHomeActivity.class);
+                }
                 startActivity(intent);
                 finish();
                 return true;

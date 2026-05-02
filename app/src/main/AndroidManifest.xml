@@ -44,6 +44,7 @@
         <activity android:name=".DriverDashboardActivity" />
         <activity android:name=".ShuttleStopActivity" />
         <activity android:name=".ProfileActivity" />
+        <activity android:name=".ScannerActivity" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"

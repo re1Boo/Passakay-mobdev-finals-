@@ -30,6 +30,44 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <!-- Notification Pop-up -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardNotification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="#4CAF50"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_person"
+                    app:tint="#FFFFFF" />
+
+                <TextView
+                    android:id="@+id/tvNotificationText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:text="New passengers waiting!"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <!-- Draggable Bottom Sheet -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/bottomSheet"
@@ -38,7 +76,7 @@
             android:background="@drawable/rounded_top_white"
             android:elevation="8dp"
             app:behavior_hideable="false"
-            app:behavior_peekHeight="200dp"
+            app:behavior_peekHeight="100dp"
             app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
             <LinearLayout
@@ -76,22 +114,6 @@
                         android:layout_alignParentStart="true"
                         android:layout_centerVertical="true"/>
 
-                    <!-- Stop Driving Button -->
-                    <Button
-                        android:id="@+id/btnStopDriving"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="Stop Driving"
-                        android:textSize="12sp"
-                        android:textColor="#FFFFFF"
-                        android:backgroundTint="#FF5252"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"/>
-
                 </RelativeLayout>
 
                 <!-- Stop items list -->
@@ -106,6 +128,21 @@
             </LinearLayout>
 
         </androidx.core.widget.NestedScrollView>
+
+        <!-- My Location FAB -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabMyLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_location_pin"
+            app:backgroundTint="#FFFFFF"
+            app:tint="#1A1A1A"
+            android:elevation="12dp"
+            app:elevation="12dp"
+            app:layout_anchor="@id/bottomSheet"
+            app:layout_anchorGravity="top|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"/>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

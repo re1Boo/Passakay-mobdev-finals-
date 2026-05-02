@@ -1,19 +1,14 @@
 package com.usc.passakay;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -25,7 +20,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -38,15 +32,13 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
     private final Context context;
     private final List<ShuttleItem> shuttleList;
-    private final FragmentManager fragmentManager;
     private int expandedPosition = -1;
     private DatabaseReference db;
-    private boolean isPassengerView = false;
+    private final boolean isPassengerView;
 
     public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList, FragmentManager fragmentManager) {
         this.context = context;
         this.shuttleList = shuttleList;
-        this.fragmentManager = fragmentManager;
         this.db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
         this.isPassengerView = context instanceof PassengerHomeActivity;
     }
@@ -66,12 +58,10 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
         holder.tvBusName.setText(shuttle.getBusName());
         holder.tvDriverName.setText("Driver: " + (shuttle.isAvailable() ? shuttle.getDriverName() : "Unavailable"));
-        holder.tvPlateNumber.setText("Plate Number: " + shuttle.getPlateNumber());
+        holder.tvPlateNumber.setText("Plate: " + shuttle.getPlateNumber());
 
-        if (isPassengerView) {
-            if (holder.tvEta != null) {
-                holder.tvEta.setText(String.valueOf(shuttle.getEta()));
-            }
+        if (isPassengerView && holder.tvEta != null) {
+            holder.tvEta.setText(String.valueOf(shuttle.getEta()));
             if (holder.etaBadge != null) {
                 if (!shuttle.isAvailable()) {
                     holder.etaBadge.setBackgroundResource(R.drawable.rounded_gray_badge);
@@ -80,29 +70,16 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
                     holder.etaBadge.setBackgroundResource(R.drawable.rounded_yellow_badge);
                 }
             }
-            
-            if (!shuttle.isAvailable()) {
-                holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
-                holder.tvBusName.setTextColor(Color.parseColor("#757575"));
-            } else {
-                holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#F5F5F5"));
-                holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
-            }
-        } else {
-            if (holder.btnStatus != null) {
-                if (shuttle.isStandby()) {
-                    holder.btnStatus.setText("Standby");
-                    holder.btnStatus.setBackgroundResource(R.drawable.rounded_green_btn);
-                    holder.btnStatus.setOnClickListener(v -> deployShuttle(shuttle));
-                } else {
-                    holder.btnStatus.setText("Deployed");
-                    holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
-                    holder.btnStatus.setOnClickListener(null);
-                }
-            }
         }
 
-        // Handle Map Visibility
+        if (!shuttle.isAvailable()) {
+            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
+            holder.tvBusName.setTextColor(Color.parseColor("#757575"));
+        } else {
+            holder.cardShuttle.setCardBackgroundColor(Color.WHITE);
+            holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
+        }
+
         if (holder.cardMap != null) {
             holder.cardMap.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
             if (isExpanded) {
@@ -110,7 +87,6 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             }
         }
 
-        // Toggle Expand/Collapse on card click
         holder.cardShuttle.setOnClickListener(v -> {
             int currentPos = holder.getBindingAdapterPosition();
             if (currentPos == RecyclerView.NO_POSITION) return;
@@ -127,36 +103,6 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         });
     }
 
-    private void deployShuttle(ShuttleItem shuttleItem) {
-        String uid = FirebaseAuth.getInstance().getUid();
-        if (uid == null) return;
-
-        db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                User user = snapshot.getValue(User.class);
-                if (user != null) {
-                    String driverName = user.getFirstName() + " " + user.getLastName();
-                    
-                    DatabaseReference shuttleRef = db.child("shuttles").child(shuttleItem.getShuttleId());
-                    shuttleRef.child("status").setValue("Deployed");
-                    shuttleRef.child("driverName").setValue(driverName);
-                    shuttleRef.child("driverId").setValue(uid);
-
-                    Intent intent = new Intent(context, ShuttleStopActivity.class);
-                    intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, shuttleItem.getBusName());
-                    intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LAT, shuttleItem.getDriverLat());
-                    intent.putExtra(ShuttleStopActivity.EXTRA_DRIVER_LNG, shuttleItem.getDriverLng());
-                    intent.putExtra("shuttleId", shuttleItem.getShuttleId());
-                    context.startActivity(intent);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
-        });
-    }
-
     @Override
     public int getItemCount() {
         return shuttleList.size();
@@ -165,18 +111,17 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     static class ShuttleViewHolder extends RecyclerView.ViewHolder implements OnMapReadyCallback {
         TextView tvBusName, tvDriverName, tvPlateNumber, tvEta;
         View etaBadge;
-        Button btnStatus;
         CardView cardShuttle, cardMap;
         MapView mapView;
         GoogleMap googleMap;
         ShuttleItem currentShuttle;
+        DatabaseReference db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
         ShuttleViewHolder(@NonNull View itemView) {
             super(itemView);
             tvBusName = itemView.findViewById(R.id.tvBusName);
             tvDriverName = itemView.findViewById(R.id.tvDriverName);
             tvPlateNumber = itemView.findViewById(R.id.tvPlateNumber);
-            btnStatus = itemView.findViewById(R.id.btnStatus);
             tvEta = itemView.findViewById(R.id.tvEta);
             etaBadge = itemView.findViewById(R.id.etaBadge);
             cardShuttle = itemView.findViewById(R.id.cardShuttle);
@@ -192,7 +137,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         @Override
         public void onMapReady(GoogleMap googleMap) {
             this.googleMap = googleMap;
-            googleMap.getUiSettings().setAllGesturesEnabled(false); 
+            googleMap.getUiSettings().setAllGesturesEnabled(true); // ENABLE GESTURES
+            googleMap.getUiSettings().setZoomControlsEnabled(true);
             MapsInitializer.initialize(itemView.getContext());
             updateMapContents();
         }
@@ -200,27 +146,40 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         void bindMap(ShuttleItem shuttle) {
             currentShuttle = shuttle;
             if (mapView != null) {
-                mapView.onResume(); // Ensure MapView is resumed when bound
+                mapView.onResume();
             }
             updateMapContents();
         }
 
         private void updateMapContents() {
             if (googleMap == null || currentShuttle == null) return;
-
-            LatLng shuttleLocation = new LatLng(currentShuttle.getDriverLat(), currentShuttle.getDriverLng());
             googleMap.clear();
             
-            if (ActivityCompat.checkSelfPermission(itemView.getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                googleMap.setMyLocationEnabled(true);
-            }
-
+            LatLng shuttleLocation = new LatLng(currentShuttle.getDriverLat(), currentShuttle.getDriverLng());
             googleMap.addMarker(new MarkerOptions()
                     .position(shuttleLocation)
                     .title(currentShuttle.getBusName())
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+            
+            // LOAD STOPS
+            db.child("shuttleStops").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    for (DataSnapshot stopSnap : snapshot.getChildren()) {
+                        ShuttleStop stop = stopSnap.getValue(ShuttleStop.class);
+                        if (stop != null) {
+                            googleMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(stop.getLatitude(), stop.getLongitude()))
+                                    .title(stop.getStopName())
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                        }
+                    }
+                }
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {}
+            });
 
-            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLocation, 15));
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLocation, 16));
         }
     }
 }

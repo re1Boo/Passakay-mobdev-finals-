@@ -50,14 +50,15 @@ public class DriverDashboardActivity extends BaseActivity {
 
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
-        // Fixed: Pass getSupportFragmentManager() to match the ShuttleAdapter constructor
         shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         loadShuttles();
         loadAnnouncements();
         
-        findViewById(R.id.cardAnnouncement).setOnClickListener(v -> showAnnouncementHistory());
+        if (findViewById(R.id.cardAnnouncement) != null) {
+            findViewById(R.id.cardAnnouncement).setOnClickListener(v -> showAnnouncementHistory());
+        }
         
         setupBottomNav();
     }
@@ -98,48 +99,52 @@ public class DriverDashboardActivity extends BaseActivity {
                     String priority = snapshot.child("priority").getValue(String.class);
                     Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
 
-                    // Check for expiry
                     if (expiresAt != null && System.currentTimeMillis() > expiresAt) {
-                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                        if (findViewById(R.id.cardAnnouncement) != null)
+                            findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
                         return;
                     }
 
-                    tvAnnouncement.setText(message);
-                    tvAnnouncement.setSelected(true);
-                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.VISIBLE);
+                    if (tvAnnouncement != null) {
+                        tvAnnouncement.setText(message);
+                        tvAnnouncement.setSelected(true);
+                    }
+                    if (findViewById(R.id.cardAnnouncement) != null)
+                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.VISIBLE);
 
-                    // Show "NEW" badge if less than 2 minutes old
                     long currentTimestamp = snapshot.child("timestamp").getValue(Long.class) != null ? snapshot.child("timestamp").getValue(Long.class) : 0;
-                    if (currentTimestamp > 0 && (System.currentTimeMillis() - currentTimestamp) < (2 * 60 * 1000)) {
-                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.VISIBLE);
-                    } else {
-                        findViewById(R.id.tvNewBadge).setVisibility(android.view.View.GONE);
+                    if (findViewById(R.id.tvNewBadge) != null) {
+                        if (currentTimestamp > 0 && (System.currentTimeMillis() - currentTimestamp) < (2 * 60 * 1000)) {
+                            findViewById(R.id.tvNewBadge).setVisibility(android.view.View.VISIBLE);
+                        } else {
+                            findViewById(R.id.tvNewBadge).setVisibility(android.view.View.GONE);
+                        }
                     }
 
-                    // Show relative time in the banner
-                    if (currentTimestamp > 0) {
+                    if (currentTimestamp > 0 && findViewById(R.id.tvAnnouncementTime) != null) {
                         TextView tvTime = findViewById(R.id.tvAnnouncementTime);
                         tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(currentTimestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
                     }
 
-                    // Change color based on priority
                     androidx.cardview.widget.CardView card = findViewById(R.id.cardAnnouncement);
-                    if ("warning".equals(priority)) {
-                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2"));
-                    } else if ("emergency".equals(priority)) {
-                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2"));
-                        
-                        android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
-                        pulse.setDuration(800);
-                        pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
-                        pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
-                        card.startAnimation(pulse);
-                    } else {
-                        card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4"));
-                        card.clearAnimation();
+                    if (card != null) {
+                        if ("warning".equals(priority)) {
+                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2"));
+                        } else if ("emergency".equals(priority)) {
+                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2"));
+                            android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
+                            pulse.setDuration(800);
+                            pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
+                            pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
+                            card.startAnimation(pulse);
+                        } else {
+                            card.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4"));
+                            card.clearAnimation();
+                        }
                     }
                 } else {
-                    findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
+                    if (findViewById(R.id.cardAnnouncement) != null)
+                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
                 }
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {}
@@ -190,7 +195,8 @@ public class DriverDashboardActivity extends BaseActivity {
                                 0,
                                 isAvailable,
                                 isStandby,
-                                10.3541, 123.9115 // Default USC
+                                shuttle.getCurrentLat() != 0 ? shuttle.getCurrentLat() : 10.3541,
+                                shuttle.getCurrentLng() != 0 ? shuttle.getCurrentLng() : 123.9115
                         );
                         shuttleList.add(item);
                     }

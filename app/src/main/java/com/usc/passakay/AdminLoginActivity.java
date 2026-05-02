@@ -2,6 +2,7 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -17,6 +18,7 @@ import com.google.firebase.database.ValueEventListener;
 
 public class AdminLoginActivity extends AppCompatActivity {
 
+    private static final String TAG = "AdminLoginActivity";
     private EditText etEmail, etPassword;
     private Button btnLogin;
     private FirebaseAuth mAuth;
@@ -58,31 +60,45 @@ public class AdminLoginActivity extends AppCompatActivity {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
                     String uid = authResult.getUser().getUid();
-                    // Check if user is admin
+                    Log.d(TAG, "Auth success, checking role for UID: " + uid);
+                    
                     db.child("users").child(uid)
                             .addListenerForSingleValueEvent(new ValueEventListener() {
                                 @Override
                                 public void onDataChange(DataSnapshot snapshot) {
-                                    User user = snapshot.getValue(User.class);
-                                    if (user != null && user.getRole().equals("admin")) {
-                                        startActivity(new Intent(AdminLoginActivity.this, AdminDashboardActivity.class));
-                                        finish();
+                                    if (snapshot.exists()) {
+                                        User user = snapshot.getValue(User.class);
+                                        if (user != null && "admin".equals(user.getRole())) {
+                                            Log.d(TAG, "Admin role confirmed");
+                                            startActivity(new Intent(AdminLoginActivity.this, AdminDashboardActivity.class));
+                                            finish();
+                                        } else {
+                                            Log.w(TAG, "User exists but is not an admin. Role: " + (user != null ? user.getRole() : "null"));
+                                            showError("You are not authorized as admin");
+                                            mAuth.signOut();
+                                        }
                                     } else {
-                                        showError("You are not authorized as admin");
+                                        Log.e(TAG, "User data not found in Realtime Database");
+                                        showError("User data not found");
                                         mAuth.signOut();
                                     }
                                 }
                                 @Override
                                 public void onCancelled(DatabaseError error) {
+                                    Log.e(TAG, "Database error: " + error.getMessage());
                                     showError("Database error: " + error.getMessage());
                                 }
                             });
                 })
-                .addOnFailureListener(e -> showError("Invalid email or password"));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Login failed: " + e.getMessage());
+                    // Show the ACTUAL error from Firebase
+                    showError("Login failed: " + e.getMessage());
+                });
     }
 
     private void showError(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
         btnLogin.setEnabled(true);
         btnLogin.setText("Login");
     }

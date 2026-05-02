@@ -7,52 +7,27 @@
     android:background="#F8F9FA"
     android:padding="16dp">
 
-    <RelativeLayout
-        android:layout_width="match_parent"
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp">
+        android:text="Shuttle Management"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#1A1A1A"
+        android:fontFamily="@font/kanit"
+        android:layout_marginBottom="4dp"/>
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Driver Management"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:textColor="#1A1A1A"
-                android:fontFamily="@font/kanit"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Add or remove shuttle drivers."
-                android:textSize="13sp"
-                android:textColor="#666666"
-                android:fontFamily="@font/kanit"/>
-        </LinearLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnAddDriver"
-            style="@style/Widget.MaterialComponents.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ADD"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            app:backgroundTint="#14D337"
-            app:cornerRadius="20dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:fontFamily="@font/kanit"/>
-
-    </RelativeLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Assign drivers to shuttles and bind devices."
+        android:textSize="13sp"
+        android:textColor="#666666"
+        android:fontFamily="@font/kanit"
+        android:layout_marginBottom="16dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerDrivers"
+        android:id="@+id/recyclerShuttles"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
