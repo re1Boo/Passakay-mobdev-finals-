@@ -5,15 +5,16 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -26,8 +27,8 @@ import java.util.List;
 
 public class AdminDriversFragment extends Fragment {
 
-    private ListView listView;
-    private Button btnAddDriver;
+    private RecyclerView recyclerView;
+    private DriverAdapter adapter;
     private DatabaseReference db;
     private FirebaseAuth mAuth;
     private List<User> driverList = new ArrayList<>();
@@ -37,10 +38,14 @@ public class AdminDriversFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_admin_drivers, container, false);
 
-        listView     = view.findViewById(R.id.listDrivers);
-        btnAddDriver = view.findViewById(R.id.btnAddDriver);
-        db           = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
-        mAuth        = FirebaseAuth.getInstance();
+        recyclerView = view.findViewById(R.id.recyclerDrivers);
+        MaterialButton btnAddDriver = view.findViewById(R.id.btnAddDriver);
+        db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+        mAuth = FirebaseAuth.getInstance();
+
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new DriverAdapter();
+        recyclerView.setAdapter(adapter);
 
         loadDrivers();
         btnAddDriver.setOnClickListener(v -> showAddDriverDialog());
@@ -62,47 +67,15 @@ public class AdminDriversFragment extends Fragment {
                                 uidList.add(child.getKey());
                             }
                         }
-                        setupListView();
+                        adapter.notifyDataSetChanged();
                     }
                     @Override
                     public void onCancelled(DatabaseError error) {}
                 });
     }
 
-    private void setupListView() {
-        ArrayAdapter<User> adapter = new ArrayAdapter<User>(getContext(),
-                R.layout.item_user, driverList) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                if (convertView == null) {
-                    convertView = LayoutInflater.from(getContext())
-                            .inflate(R.layout.item_user, parent, false);
-                }
-                User driver = driverList.get(position);
-
-                TextView tvName      = convertView.findViewById(R.id.tvName);
-                TextView tvStudentId = convertView.findViewById(R.id.tvStudentId);
-                TextView tvRole      = convertView.findViewById(R.id.tvRole);
-                TextView tvStatus    = convertView.findViewById(R.id.tvStatus);
-                Button btnToggle     = convertView.findViewById(R.id.btnToggle);
-
-                tvName.setText(driver.getFirstName() + " " + driver.getLastName());
-                tvStudentId.setText("ID: " + driver.getStudentId());
-                tvRole.setText("Role: driver");
-                tvStatus.setText("Status: " + driver.getStatus());
-                btnToggle.setText("Remove");
-                btnToggle.setBackgroundColor(0xFFE53935);
-                btnToggle.setOnClickListener(v -> removeDriver(uidList.get(position)));
-
-                return convertView;
-            }
-        };
-        listView.setAdapter(adapter);
-    }
-
     private void showAddDriverDialog() {
-        View dialogView = LayoutInflater.from(getContext())
-                .inflate(R.layout.dialog_add_driver, null);
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_add_driver, null);
 
         EditText etFirstName = dialogView.findViewById(R.id.etFirstName);
         EditText etLastName  = dialogView.findViewById(R.id.etLastName);
@@ -111,7 +84,7 @@ public class AdminDriversFragment extends Fragment {
         EditText etPassword  = dialogView.findViewById(R.id.etPassword);
 
         new AlertDialog.Builder(getContext())
-                .setTitle("Add Driver")
+                .setTitle("Add New Driver")
                 .setView(dialogView)
                 .setPositiveButton("Add", (dialog, which) -> {
                     String firstName = etFirstName.getText().toString().trim();
@@ -120,20 +93,17 @@ public class AdminDriversFragment extends Fragment {
                     String email     = etEmail.getText().toString().trim();
                     String password  = etPassword.getText().toString().trim();
 
-                    if (firstName.isEmpty() || lastName.isEmpty() ||
-                            studentId.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                    if (firstName.isEmpty() || lastName.isEmpty() || studentId.isEmpty() || email.isEmpty() || password.isEmpty()) {
                         Toast.makeText(getContext(), "Please fill all fields", Toast.LENGTH_SHORT).show();
                         return;
                     }
-
                     createDriver(firstName, lastName, studentId, email, password);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void createDriver(String firstName, String lastName,
-                              String studentId, String email, String password) {
+    private void createDriver(String firstName, String lastName, String studentId, String email, String password) {
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
                     String uid = authResult.getUser().getUid();
@@ -148,27 +118,61 @@ public class AdminDriversFragment extends Fragment {
                     driver.setCourseId(0);
 
                     db.child("users").child(uid).setValue(driver)
-                            .addOnSuccessListener(a -> Toast.makeText(getContext(),
-                                    "Driver added successfully!", Toast.LENGTH_SHORT).show())
-                            .addOnFailureListener(e -> Toast.makeText(getContext(),
-                                    "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                            .addOnSuccessListener(a -> Toast.makeText(getContext(), "Driver added!", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
                 })
-                .addOnFailureListener(e -> Toast.makeText(getContext(),
-                        "Failed to create driver: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(getContext(), "Auth Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void removeDriver(String uid) {
         new AlertDialog.Builder(getContext())
                 .setTitle("Remove Driver")
-                .setMessage("Are you sure you want to remove this driver?")
-                .setPositiveButton("Remove", (dialog, which) -> {
+                .setMessage("Delete this driver account from the system?")
+                .setPositiveButton("Delete", (dialog, which) -> {
                     db.child("users").child(uid).removeValue()
-                            .addOnSuccessListener(a -> Toast.makeText(getContext(),
-                                    "Driver removed", Toast.LENGTH_SHORT).show())
-                            .addOnFailureListener(e -> Toast.makeText(getContext(),
-                                    "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                            .addOnSuccessListener(a -> Toast.makeText(getContext(), "Driver removed", Toast.LENGTH_SHORT).show());
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    class DriverAdapter extends RecyclerView.Adapter<DriverAdapter.DriverViewHolder> {
+        @NonNull
+        @Override
+        public DriverViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_user, parent, false);
+            return new DriverViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull DriverViewHolder holder, int position) {
+            User driver = driverList.get(position);
+            String uid = uidList.get(position);
+
+            holder.tvName.setText(driver.getFirstName() + " " + driver.getLastName());
+            holder.tvId.setText("ID: " + driver.getStudentId());
+            holder.tvRole.setText("DRIVER");
+            holder.tvStatus.setText(driver.getStatus().toUpperCase());
+
+            holder.btnToggle.setText("REMOVE");
+            holder.btnToggle.setTextColor(0xFFE53935);
+            holder.btnToggle.setOnClickListener(v -> removeDriver(uid));
+        }
+
+        @Override
+        public int getItemCount() { return driverList.size(); }
+
+        class DriverViewHolder extends RecyclerView.ViewHolder {
+            TextView tvName, tvId, tvRole, tvStatus;
+            MaterialButton btnToggle;
+            DriverViewHolder(View itemView) {
+                super(itemView);
+                tvName = itemView.findViewById(R.id.tvName);
+                tvId = itemView.findViewById(R.id.tvStudentId);
+                tvRole = itemView.findViewById(R.id.tvRole);
+                tvStatus = itemView.findViewById(R.id.tvStatus);
+                btnToggle = itemView.findViewById(R.id.btnToggle);
+            }
+        }
     }
 }

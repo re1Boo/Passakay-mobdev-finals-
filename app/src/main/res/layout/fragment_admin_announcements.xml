@@ -15,26 +15,84 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="System Announcements"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"
-            android:layout_marginBottom="8dp"/>
+            android:fontFamily="@font/kanit"
+            android:layout_marginBottom="4dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="This message will be visible to all passengers and drivers."
+            android:text="Broadcast messages to all passengers and drivers."
             android:textSize="13sp"
             android:textColor="#666666"
+            android:fontFamily="@font/kanit"
             android:layout_marginBottom="20dp"/>
 
         <!-- CURRENT LIVE CARD -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
+            app:cardCornerRadius="16dp"
             app:cardElevation="2dp"
-            android:layout_marginBottom="20dp">
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="#FFFFFF">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/loading_dot"
+                        android:backgroundTint="#14D337"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="LIVE BROADCAST"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="#14D337"
+                        android:letterSpacing="0.1"
+                        android:fontFamily="@font/kanit"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvCurrentAnnouncement"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No active broadcast."
+                    android:textColor="#1A1A1A"
+                    android:textSize="15sp"
+                    android:fontFamily="@font/kanit"
+                    android:lineSpacingExtra="4dp"
+                    android:padding="12dp"
+                    android:background="@drawable/rounded_input_bg"
+                    android:backgroundTint="#F5F5F5"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- INPUT SECTION -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="#FFFFFF">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -45,100 +103,80 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Current Live Announcement:"
-                    android:textSize="11sp"
-                    android:textColor="#888888"
+                    android:text="Priority Level"
+                    android:textSize="14sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="8dp"/>
+                    android:textColor="#1A1A1A"
+                    android:fontFamily="@font/kanit"
+                    android:layout_marginBottom="12dp"/>
 
-                <TextView
-                    android:id="@+id/tvCurrentAnnouncement"
+                <RadioGroup
+                    android:id="@+id/rgPriority"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="No active broadcast."
-                    android:textColor="#1A1A1A"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <RadioButton android:id="@+id/rbNormal" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Normal" android:checked="true" android:buttonTint="#FBC02D" android:textSize="12sp" android:fontFamily="@font/kanit"/>
+                    <RadioButton android:id="@+id/rbWarning" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Warning" android:buttonTint="#FB8C00" android:textSize="12sp" android:fontFamily="@font/kanit"/>
+                    <RadioButton android:id="@+id/rbEmergency" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Critical" android:buttonTint="#E53935" android:textSize="12sp" android:fontFamily="@font/kanit"/>
+                </RadioGroup>
+
+                <EditText
+                    android:id="@+id/etAnnouncement"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:background="@drawable/rounded_input_bg"
+                    android:gravity="top"
+                    android:hint="Write your message here..."
+                    android:padding="16dp"
                     android:textSize="14sp"
-                    android:background="#F0F0F0"
-                    android:padding="12dp"/>
+                    android:fontFamily="@font/kanit"
+                    android:layout_marginBottom="16dp"
+                    android:inputType="textMultiLine"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnUpdateAnnouncement"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:text="SEND BROADCAST"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    app:backgroundTint="#14D337"
+                    app:cornerRadius="12dp"
+                    android:fontFamily="@font/kanit"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnClearAnnouncement"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Reset to Default"
+                    android:textColor="#E53935"
+                    android:fontFamily="@font/kanit"/>
+
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- INPUT FORM -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Priority Level"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="#1A1A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <RadioGroup
-            android:id="@+id/rgPriority"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
-
-            <RadioButton android:id="@+id/rbNormal" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Normal" android:checked="true" android:buttonTint="#FBC02D"/>
-            <RadioButton android:id="@+id/rbWarning" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Warning" android:buttonTint="#FB8C00"/>
-            <RadioButton android:id="@+id/rbEmergency" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Emergency" android:buttonTint="#E53935"/>
-        </RadioGroup>
-
-        <EditText
-            android:id="@+id/etAnnouncement"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:background="@drawable/rounded_input_bg"
-            android:gravity="top"
-            android:hint="Type new announcement..."
-            android:padding="12dp"
-            android:textSize="14sp"
-            android:layout_marginBottom="16dp"/>
-
-        <Button
-            android:id="@+id/btnUpdateAnnouncement"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Broadcast to All"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:backgroundTint="#14D337"
-            app:cornerRadius="8dp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btnClearAnnouncement"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Clear Announcement"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#E53935"
-            app:cornerRadius="8dp"
-            android:layout_marginBottom="24dp"/>
-
         <!-- HISTORY SECTION -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginBottom="16dp"/>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Broadcast History Log"
-            android:textSize="16sp"
+            android:text="Recent Logs"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"
+            android:fontFamily="@font/kanit"
             android:layout_marginBottom="4dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tap an item to edit/reuse. Long-press to delete."
+            android:text="Tap to reuse message. Long-press to delete."
             android:textSize="11sp"
             android:textColor="#888888"
+            android:fontFamily="@font/kanit"
             android:layout_marginBottom="12dp"/>
 
         <androidx.recyclerview.widget.RecyclerView
@@ -146,7 +184,8 @@
             android:layout_width="match_parent"
             android:layout_height="400dp"
             android:nestedScrollingEnabled="false"
-            android:background="#FFFFFF"/>
+            android:clipToPadding="false"
+            android:paddingBottom="20dp"/>
 
     </LinearLayout>
 </ScrollView>

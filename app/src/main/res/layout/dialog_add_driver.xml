@@ -3,40 +3,72 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="20dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create Driver Account"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#1A1A1A"
+        android:layout_marginBottom="16dp"
+        android:fontFamily="@font/kanit"/>
 
     <EditText android:id="@+id/etFirstName"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:hint="First Name"
         android:inputType="textPersonName"
-        android:layout_marginBottom="8dp"/>
+        android:background="@drawable/rounded_input_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="12dp"/>
 
     <EditText android:id="@+id/etLastName"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:hint="Last Name"
         android:inputType="textPersonName"
-        android:layout_marginBottom="8dp"/>
+        android:background="@drawable/rounded_input_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="12dp"/>
 
     <EditText android:id="@+id/etStudentId"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:hint="Employee/Student ID"
         android:inputType="text"
-        android:layout_marginBottom="8dp"/>
+        android:background="@drawable/rounded_input_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="12dp"/>
 
     <EditText android:id="@+id/etEmail"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:hint="Email"
         android:inputType="textEmailAddress"
-        android:layout_marginBottom="8dp"/>
+        android:background="@drawable/rounded_input_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="12dp"/>
 
     <EditText android:id="@+id/etPassword"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:hint="Password"
-        android:inputType="textPassword"/>
+        android:inputType="textPassword"
+        android:background="@drawable/rounded_input_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp"/>
 
 </LinearLayout>
