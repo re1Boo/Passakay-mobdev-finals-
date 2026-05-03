@@ -41,7 +41,7 @@ public class SplashActivity extends BaseActivity {
     }
 
     /**
-     * Priority 1: Check if THIS physical device is bound to a shuttle via App Instance ID.
+     * Priority 1: Verify user role and check hardware binding ONLY for drivers.
      */
     private void checkHardwareBindingFirst() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -53,7 +53,7 @@ public class SplashActivity extends BaseActivity {
         final String myAppId = getAppInstanceId();
         final String uid = currentUser.getUid();
 
-        // First, get user role. If they aren't a driver, they shouldn't be auto-deployed by hardware binding.
+        // Get user role first.
         db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot userSnapshot) {
@@ -76,7 +76,7 @@ public class SplashActivity extends BaseActivity {
                     return;
                 }
 
-                // If user is a driver, check for hardware binding
+                // If driver, check for hardware binding
                 if ("driver".equals(user.getRole())) {
                     db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
@@ -88,25 +88,15 @@ public class SplashActivity extends BaseActivity {
                                     return;
                                 }
                             }
-                            // Driver but phone not bound, use standard session logic (checks assignedShuttleId)
                             redirectBasedOnRole(user, uid);
                         }
-
-                        @Override
-                        public void onCancelled(@NonNull DatabaseError error) {
-                            redirectBasedOnRole(user, uid);
-                        }
+                        @Override public void onCancelled(@NonNull DatabaseError error) { redirectBasedOnRole(user, uid); }
                     });
                 } else {
-                    // Not a driver (Admin or Passenger), ignore hardware binding and redirect
                     redirectBasedOnRole(user, uid);
                 }
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                goToLogin();
-            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { goToLogin(); }
         });
     }
 

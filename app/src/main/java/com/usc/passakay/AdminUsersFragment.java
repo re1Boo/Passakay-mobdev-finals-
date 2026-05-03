@@ -80,13 +80,17 @@ public class AdminUsersFragment extends Fragment {
                 filteredUids.add(allUids.get(i));
             }
         }
-        adapter.notifyDataSetChanged();
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private void loadUsers() {
         db.child("users").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
+                if (getContext() == null) return;
+                
                 allUsers.clear();
                 allUids.clear();
                 for (DataSnapshot child : snapshot.getChildren()) {
@@ -105,8 +109,16 @@ public class AdminUsersFragment extends Fragment {
     private void toggleUserStatus(String uid, User user) {
         String newStatus = user.getStatus().equals("active") ? "blocked" : "active";
         db.child("users").child(uid).child("status").setValue(newStatus)
-                .addOnSuccessListener(a -> Toast.makeText(getContext(), "User " + newStatus, Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(a -> {
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "User " + newStatus, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder> {
