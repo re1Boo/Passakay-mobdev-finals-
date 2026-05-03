@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -616,6 +617,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         TextView tvName = markerView.findViewById(R.id.tvMarkerName);
         TextView tvCount = markerView.findViewById(R.id.tvMarkerWaiting);
         View viewDot = markerView.findViewById(R.id.viewDot);
+        ImageView ivPin = markerView.findViewById(R.id.ivMarkerPin);
 
         if (tvName != null) tvName.setText(name);
         if (tvCount != null) {
@@ -634,6 +636,9 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 } else {
                     viewDot.setBackgroundColor(colorToApply);
                 }
+            }
+            if (ivPin != null) {
+                ivPin.setColorFilter(colorToApply);
             }
         }
 

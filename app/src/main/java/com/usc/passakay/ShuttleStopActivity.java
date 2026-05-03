@@ -4,11 +4,14 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -280,8 +283,33 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
 
     private Bitmap createMarkerBitmap(StopItem item) {
         View markerView = getLayoutInflater().inflate(R.layout.marker_stop, null);
-        ((TextView) markerView.findViewById(R.id.tvMarkerName)).setText(item.getStopName());
-        ((TextView) markerView.findViewById(R.id.tvMarkerWaiting)).setText(String.valueOf(item.getWaitingCount()));
+        TextView tvName = markerView.findViewById(R.id.tvMarkerName);
+        TextView tvCount = markerView.findViewById(R.id.tvMarkerWaiting);
+        View viewDot = markerView.findViewById(R.id.viewDot);
+        ImageView ivPin = markerView.findViewById(R.id.ivMarkerPin);
+
+        tvName.setText(item.getStopName());
+        tvCount.setText(String.valueOf(item.getWaitingCount()));
+
+        // Red if has waiting (>0), Green if no waiting (0)
+        int redColor = Color.parseColor("#F44336");
+        int greenColor = Color.parseColor("#4CAF50");
+        int colorToApply = (item.getWaitingCount() > 0) ? redColor : greenColor;
+
+        tvCount.setTextColor(colorToApply);
+        if (viewDot != null) {
+            Drawable background = viewDot.getBackground();
+            if (background != null) {
+                background.mutate().setTint(colorToApply);
+            } else {
+                viewDot.setBackgroundColor(colorToApply);
+            }
+        }
+
+        if (ivPin != null) {
+            ivPin.setColorFilter(colorToApply);
+        }
+
         return getBitmapFromView(markerView);
     }
 
