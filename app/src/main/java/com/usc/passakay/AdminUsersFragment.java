@@ -58,6 +58,8 @@ public class AdminUsersFragment extends Fragment {
     }
 
     private void setupListView() {
+        if (getContext() == null) return;
+
         ArrayAdapter<User> adapter = new ArrayAdapter<User>(getContext(),
                 R.layout.item_user, userList) {
             @Override
