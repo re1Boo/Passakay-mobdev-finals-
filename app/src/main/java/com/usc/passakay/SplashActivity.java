@@ -51,59 +51,63 @@ public class SplashActivity extends BaseActivity {
         }
 
         final String myAppId = getAppInstanceId();
+        final String uid = currentUser.getUid();
 
-        db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
+        // First, get user role. If they aren't a driver, they shouldn't be auto-deployed by hardware binding.
+        db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot shuttleSnap : snapshot.getChildren()) {
-                    Shuttle s = shuttleSnap.getValue(Shuttle.class);
-                    if (s != null && myAppId.equals(s.getDeviceId())) {
-                        // THIS phone is bound. Deploy and go.
-                        autoDeployAndGo(currentUser.getUid(), s.getShuttleId(), "Shuttle " + s.getShuttleId());
-                        return;
-                    }
+            public void onDataChange(@NonNull DataSnapshot userSnapshot) {
+                if (!userSnapshot.exists()) {
+                    mAuth.signOut();
+                    goToLogin();
+                    return;
                 }
-                // No binding, check user role
-                checkUserSession();
+
+                User user = userSnapshot.getValue(User.class);
+                if (user == null) {
+                    goToLogin();
+                    return;
+                }
+
+                if ("blocked".equals(user.getStatus())) {
+                    mAuth.signOut();
+                    goToLogin();
+                    Toast.makeText(SplashActivity.this, "Your account is blocked.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // If user is a driver, check for hardware binding
+                if ("driver".equals(user.getRole())) {
+                    db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            for (DataSnapshot shuttleSnap : snapshot.getChildren()) {
+                                Shuttle s = shuttleSnap.getValue(Shuttle.class);
+                                if (s != null && myAppId.equals(s.getDeviceId())) {
+                                    autoDeployAndGo(uid, s.getShuttleId(), "Shuttle " + s.getShuttleId());
+                                    return;
+                                }
+                            }
+                            // Driver but phone not bound, use standard session logic
+                            redirectBasedOnRole(user, uid);
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            redirectBasedOnRole(user, uid);
+                        }
+                    });
+                } else {
+                    // Not a driver (Admin or Passenger), ignore hardware binding and redirect
+                    redirectBasedOnRole(user, uid);
+                }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                checkUserSession();
+                goToLogin();
             }
         });
-    }
-
-    private void checkUserSession() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            String uid = currentUser.getUid();
-            db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        User user = snapshot.getValue(User.class);
-                        if (user != null) {
-                            if ("blocked".equals(user.getStatus())) {
-                                mAuth.signOut();
-                                goToLogin();
-                                Toast.makeText(SplashActivity.this, "Your account is blocked.", Toast.LENGTH_SHORT).show();
-                                return;
-                            }
-                            redirectBasedOnRole(user, uid);
-                        } else {
-                            goToLogin();
-                        }
-                    } else {
-                        mAuth.signOut();
-                        goToLogin();
-                    }
-                }
-                @Override public void onCancelled(@NonNull DatabaseError error) { goToLogin(); }
-            });
-        } else {
-            goToLogin();
-        }
     }
 
     private void redirectBasedOnRole(User user, String uid) {
