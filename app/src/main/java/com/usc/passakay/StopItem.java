@@ -4,7 +4,7 @@ public class StopItem {
     private String stopName;
     private int waitingCount;
     private int distanceMeters;
-    private boolean hasWaiting;
+    private boolean hasWaiting; // controls yellow vs gray Pick up button
 
     public StopItem(String stopName, int waitingCount, int distanceMeters) {
         this.stopName       = stopName;

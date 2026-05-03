@@ -145,9 +145,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
 
         void bindMap(ShuttleItem shuttle) {
             currentShuttle = shuttle;
-            if (mapView != null) {
-                mapView.onResume();
-            }
+            if (mapView != null) mapView.onResume();
+
             updateMapContents();
         }
 

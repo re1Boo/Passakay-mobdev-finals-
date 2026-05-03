@@ -69,8 +69,7 @@ public class AdminDriversFragment extends Fragment {
                         }
                         loadShuttles();
                     }
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {}
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
                 });
     }
 
@@ -109,15 +108,31 @@ public class AdminDriversFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull ShuttleViewHolder holder, int position) {
             Shuttle shuttle = shuttleList.get(position);
+            
+            final String currentDeviceId = (getActivity() instanceof BaseActivity) ? ((BaseActivity) getActivity()).getAppInstanceId() : "";
+            String boundDeviceId = shuttle.getDeviceId();
+            boolean isBound = boundDeviceId != null && !boundDeviceId.isEmpty();
+            boolean isBoundToMe = currentDeviceId != null && !currentDeviceId.isEmpty() && currentDeviceId.equals(boundDeviceId);
+
             holder.tvName.setText("Shuttle " + shuttle.getShuttleId());
             
-            boolean isBound = shuttle.getDeviceId() != null && !shuttle.getDeviceId().isEmpty();
-            holder.tvPlate.setText("Plate: " + shuttle.getPlateNumber() + (isBound ? " (Bound)" : " (Unbound)"));
-            holder.btnBind.setText(isBound ? "UNBIND" : "BIND");
+            if (isBoundToMe) {
+                holder.tvPlate.setText("Plate: " + shuttle.getPlateNumber() + " (Bound to THIS phone)");
+                holder.btnBind.setText("UNBIND THIS PHONE");
+            } else if (isBound) {
+                holder.tvPlate.setText("Plate: " + shuttle.getPlateNumber() + " (Bound to other device)");
+                holder.btnBind.setText("UNBIND REMOTE DEVICE");
+            } else {
+                holder.tvPlate.setText("Plate: " + shuttle.getPlateNumber() + " (Unbound)");
+                holder.btnBind.setText("BIND THIS PHONE");
+            }
 
             holder.btnBind.setOnClickListener(v -> {
-                if (isBound) clearDeviceBinding(shuttle.getShuttleId());
-                else bindCurrentDevice(shuttle.getShuttleId());
+                if (isBound || isBoundToMe) {
+                    clearDeviceBinding(shuttle.getShuttleId());
+                } else {
+                    bindCurrentDevice(shuttle.getShuttleId(), currentDeviceId);
+                }
             });
 
             ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, driverNames);
@@ -156,26 +171,32 @@ public class AdminDriversFragment extends Fragment {
         }
     }
 
-    private void bindCurrentDevice(int shuttleId) {
-        if (getContext() == null) return;
-        String androidId = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
-        db.child("shuttles").child(String.valueOf(shuttleId)).child("deviceId").setValue(androidId)
-                .addOnSuccessListener(a -> Toast.makeText(getContext(), "Bound to Shuttle " + shuttleId, Toast.LENGTH_SHORT).show());
+    private void bindCurrentDevice(int shuttleId, String instanceId) {
+        if (instanceId == null || instanceId.isEmpty()) return;
+
+        // Ensure this app instance is not bound to any other shuttle
+        for (Shuttle s : shuttleList) {
+            if (instanceId.equals(s.getDeviceId())) {
+                db.child("shuttles").child(String.valueOf(s.getShuttleId())).child("deviceId").setValue("");
+            }
+        }
+
+        db.child("shuttles").child(String.valueOf(shuttleId)).child("deviceId").setValue(instanceId)
+                .addOnSuccessListener(a -> Toast.makeText(getContext(), "Bound this device to Shuttle " + shuttleId, Toast.LENGTH_SHORT).show());
     }
 
     private void clearDeviceBinding(int shuttleId) {
         db.child("shuttles").child(String.valueOf(shuttleId)).child("deviceId").setValue("")
-            .addOnSuccessListener(a -> Toast.makeText(getContext(), "Device binding cleared", Toast.LENGTH_SHORT).show());
+            .addOnSuccessListener(a -> Toast.makeText(getContext(), "Device binding cleared remotely", Toast.LENGTH_SHORT).show());
     }
 
     private void updateShuttleAssignment(Shuttle shuttle, String newDriverId, String newDriverName) {
-        String oldDriverId = shuttle.getDriverId();
         int shuttleId = shuttle.getShuttleId();
-
-        if (oldDriverId != null && !oldDriverId.isEmpty()) {
-            db.child("users").child(oldDriverId).child("assignedShuttleId").setValue(-1);
+        
+        if (shuttle.getDriverId() != null && !shuttle.getDriverId().isEmpty()) {
+            db.child("users").child(shuttle.getDriverId()).child("assignedShuttleId").setValue(-1);
         }
-
+        
         if (!newDriverId.isEmpty()) {
             db.child("users").child(newDriverId).child("assignedShuttleId").setValue(shuttleId);
         }

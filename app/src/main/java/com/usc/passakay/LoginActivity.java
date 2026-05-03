@@ -2,9 +2,7 @@ package com.usc.passakay;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.text.InputType;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -20,10 +18,8 @@ import com.google.firebase.database.ValueEventListener;
 
 public class LoginActivity extends BaseActivity {
 
-    private static final String TAG = "LoginActivity";
     private EditText etStudentId, etPassword;
     private Button btnLogin;
-    private TextView btnCreateAccount;
     private FirebaseAuth mAuth;
     private DatabaseReference db;
 
@@ -43,7 +39,6 @@ public class LoginActivity extends BaseActivity {
         etStudentId      = findViewById(R.id.etStudentId);
         etPassword       = findViewById(R.id.etPassword);
         btnLogin         = findViewById(R.id.btnLogin);
-        btnCreateAccount = findViewById(R.id.btnCreateAccount);
         ImageView imgMascot = findViewById(R.id.imgMascot);
         ImageView ivTogglePassword = findViewById(R.id.ivTogglePassword);
 
@@ -51,14 +46,10 @@ public class LoginActivity extends BaseActivity {
         ivTogglePassword.setOnClickListener(v -> {
             isVisible[0] = !isVisible[0];
             if (isVisible[0]) {
-                etPassword.setInputType(
-                    InputType.TYPE_CLASS_TEXT |
-                    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+                etPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
                 ivTogglePassword.setImageResource(R.drawable.ic_eye_on);
             } else {
-                etPassword.setInputType(
-                    InputType.TYPE_CLASS_TEXT |
-                    InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                etPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 ivTogglePassword.setImageResource(R.drawable.ic_eye_off);
             }
             etPassword.setSelection(etPassword.getText().length());
@@ -66,7 +57,7 @@ public class LoginActivity extends BaseActivity {
 
         btnLogin.setOnClickListener(v -> handleLogin());
 
-        btnCreateAccount.setOnClickListener(v ->
+        findViewById(R.id.btnCreateAccount).setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class))
         );
 
@@ -103,8 +94,6 @@ public class LoginActivity extends BaseActivity {
                                         showError("Your account is blocked.");
                                         return;
                                     }
-                                    
-                                    // If user is a driver, check device binding
                                     if ("driver".equals(user.getRole())) {
                                         checkDriverDevice(user, password);
                                     } else {
@@ -116,22 +105,19 @@ public class LoginActivity extends BaseActivity {
                             showError("Student ID not found");
                         }
                     }
-
-                    @Override
-                    public void onCancelled(DatabaseError error) {
-                        showError("Database error: " + error.getMessage());
-                    }
+                    @Override public void onCancelled(DatabaseError error) { showError("Database error"); }
                 });
     }
 
     private void checkDriverDevice(User user, String password) {
         int assignedId = user.getAssignedShuttleId();
         if (assignedId <= 0) {
-            showError("No shuttle assigned to you. Contact admin.");
+            showError("No shuttle assigned. Contact admin.");
             return;
         }
 
-        String currentDeviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        // FIX: Use getAppInstanceId() to match Admin binding logic
+        String currentDeviceId = getAppInstanceId();
 
         db.child("shuttles").child(String.valueOf(assignedId))
                 .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -140,15 +126,10 @@ public class LoginActivity extends BaseActivity {
                         Shuttle shuttle = snapshot.getValue(Shuttle.class);
                         if (shuttle != null) {
                             String registeredDeviceId = shuttle.getDeviceId();
-                            
-                            // If the shuttle has no device ID yet, the first login "binds" it (useful for setup)
-                            // Or, require admin to set it. Here we check for match.
                             if (registeredDeviceId == null || registeredDeviceId.isEmpty()) {
-                                // Optional: Bind device automatically on first login if you want
-                                // db.child("shuttles").child(String.valueOf(assignedId)).child("deviceId").setValue(currentDeviceId);
-                                showError("This shuttle is not bound to any device. Contact admin.");
+                                showError("Shuttle not bound to any device. Contact admin.");
                             } else if (!registeredDeviceId.equals(currentDeviceId)) {
-                                showError("Unauthorized device. Please use the assigned phone for Shuttle #" + assignedId);
+                                showError("Unauthorized device. Please use assigned phone for Shuttle #" + assignedId);
                             } else {
                                 loginWithEmail(user.getEmail(), password);
                             }
@@ -156,11 +137,7 @@ public class LoginActivity extends BaseActivity {
                             showError("Assigned shuttle not found.");
                         }
                     }
-
-                    @Override
-                    public void onCancelled(DatabaseError error) {
-                        showError("Error checking device.");
-                    }
+                    @Override public void onCancelled(DatabaseError error) { showError("Error checking device."); }
                 });
     }
 
@@ -177,25 +154,20 @@ public class LoginActivity extends BaseActivity {
                 User user = snapshot.getValue(User.class);
                 if (user != null) {
                     Intent intent;
-                    switch (user.getRole()) {
-                        case "driver":
-                            intent = new Intent(LoginActivity.this, ShuttleStopActivity.class);
-                            intent.putExtra("shuttleId", String.valueOf(user.getAssignedShuttleId()));
-                            break;
-                        case "admin":
-                            intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
-                            break;
-                        default:
-                            intent = new Intent(LoginActivity.this, PassengerHomeActivity.class);
-                            break;
+                    if ("driver".equals(user.getRole())) {
+                        intent = new Intent(LoginActivity.this, ShuttleStopActivity.class);
+                        intent.putExtra("shuttleId", String.valueOf(user.getAssignedShuttleId()));
+                    } else if ("admin".equals(user.getRole())) {
+                        intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
+                    } else {
+                        intent = new Intent(LoginActivity.this, PassengerHomeActivity.class);
                     }
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
                     finish();
                 }
             }
-            @Override
-            public void onCancelled(DatabaseError error) {}
+            @Override public void onCancelled(DatabaseError error) {}
         });
     }
 

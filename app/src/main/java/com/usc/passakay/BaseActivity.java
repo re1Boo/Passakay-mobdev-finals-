@@ -2,6 +2,7 @@ package com.usc.passakay;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
@@ -16,6 +17,8 @@ import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.util.UUID;
+
 public class BaseActivity extends AppCompatActivity {
 
     protected void logout() {
@@ -24,6 +27,20 @@ public class BaseActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    /**
+     * Generates a persistent unique ID for this app installation.
+     * Prevents conflicts between multiple emulators or devices.
+     */
+    protected String getAppInstanceId() {
+        SharedPreferences prefs = getSharedPreferences("PassakayPrefs", MODE_PRIVATE);
+        String appId = prefs.getString("app_instance_id", null);
+        if (appId == null) {
+            appId = UUID.randomUUID().toString();
+            prefs.edit().putString("app_instance_id", appId).apply();
+        }
+        return appId;
     }
 
     protected Bitmap getBitmapFromView(View view) {
@@ -35,11 +52,6 @@ public class BaseActivity extends AppCompatActivity {
         Canvas canvas = new Canvas(bitmap);
         view.draw(canvas);
         return bitmap;
-    }
-
-    protected BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId) {
-        // Default size of 40dp for map icons if not specified
-        return bitmapDescriptorFromVector(context, vectorResId, 40, 40);
     }
 
     protected BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId, int widthDp, int heightDp) {
