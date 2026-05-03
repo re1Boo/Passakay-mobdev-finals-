@@ -38,6 +38,7 @@ public class DriverDashboardActivity extends BaseActivity {
             finish();
             return;
         }
+
         currentUserId = currentUser.getUid();
 
         setContentView(R.layout.activity_driver_dashboard);

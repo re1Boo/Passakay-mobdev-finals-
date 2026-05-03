@@ -9,7 +9,6 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -19,7 +18,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-public class SplashActivity extends AppCompatActivity {
+public class SplashActivity extends BaseActivity {
 
     private FirebaseAuth mAuth;
     private DatabaseReference db;
@@ -38,11 +37,41 @@ public class SplashActivity extends AppCompatActivity {
 
         animateDots(dot1, dot2, dot3);
 
-        // Run seeder once if needed to populate assignments
-        // DataSeeder seeder = new DataSeeder();
-        // seeder.seedAll();
+        new Handler(Looper.getMainLooper()).postDelayed(this::checkHardwareBindingFirst, 3000);
+    }
 
-        new Handler(Looper.getMainLooper()).postDelayed(this::checkUserSession, 3000);
+    /**
+     * Priority 1: Check if THIS physical device is bound to a shuttle via App Instance ID.
+     */
+    private void checkHardwareBindingFirst() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            goToLogin();
+            return;
+        }
+
+        final String myAppId = getAppInstanceId();
+
+        db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot shuttleSnap : snapshot.getChildren()) {
+                    Shuttle s = shuttleSnap.getValue(Shuttle.class);
+                    if (s != null && myAppId.equals(s.getDeviceId())) {
+                        // THIS phone is bound. Deploy and go.
+                        autoDeployAndGo(currentUser.getUid(), s.getShuttleId(), "Shuttle " + s.getShuttleId());
+                        return;
+                    }
+                }
+                // No binding, check user role
+                checkUserSession();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                checkUserSession();
+            }
+        });
     }
 
     private void checkUserSession() {
@@ -70,10 +99,7 @@ public class SplashActivity extends AppCompatActivity {
                         goToLogin();
                     }
                 }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    goToLogin();
-                }
+                @Override public void onCancelled(@NonNull DatabaseError error) { goToLogin(); }
             });
         } else {
             goToLogin();
@@ -83,9 +109,8 @@ public class SplashActivity extends AppCompatActivity {
     private void redirectBasedOnRole(User user, String uid) {
         String role = user.getRole();
         if ("driver".equals(role)) {
-            // Driver uses assigned shuttle logic
             if (user.getAssignedShuttleId() > 0) {
-                autoDeployAndGo(user, uid, user.getAssignedShuttleId());
+                autoDeployAndGo(uid, user.getAssignedShuttleId(), "Shuttle " + user.getAssignedShuttleId());
             } else {
                 mAuth.signOut();
                 goToLogin();
@@ -100,16 +125,15 @@ public class SplashActivity extends AppCompatActivity {
         }
     }
 
-    private void autoDeployAndGo(User user, String uid, int shuttleId) {
+    private void autoDeployAndGo(String uid, int shuttleId, String busLabel) {
         DatabaseReference shuttleRef = db.child("shuttles").child(String.valueOf(shuttleId));
         shuttleRef.child("status").setValue("Deployed");
         shuttleRef.child("driverId").setValue(uid);
-        shuttleRef.child("driverName").setValue(user.getFirstName() + " " + user.getLastName());
         shuttleRef.child("active").setValue(true);
 
         Intent intent = new Intent(SplashActivity.this, ShuttleStopActivity.class);
         intent.putExtra("shuttleId", String.valueOf(shuttleId));
-        intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, "Shuttle " + shuttleId);
+        intent.putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, busLabel);
         startActivity(intent);
         finish();
     }
@@ -122,6 +146,7 @@ public class SplashActivity extends AppCompatActivity {
     private void animateDots(View dot1, View dot2, View dot3) {
         View[] dots = {dot1, dot2, dot3};
         for (int i = 0; i < dots.length; i++) {
+            if (dots[i] == null) continue;
             ObjectAnimator animator = ObjectAnimator.ofFloat(dots[i], "alpha", 0.2f, 1f, 0.2f);
             animator.setDuration(300);
             animator.setStartDelay(i * 200L);

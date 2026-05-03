@@ -14,11 +14,14 @@ public class User {
     public String email;
     public String studentId;
     public boolean isWaiting;
+    public boolean isRiding;
     public String lastScannedStop;
     public int assignedShuttleId;
+    public int ridingShuttleId;
     public double currentLat;
     public double currentLng;
     public String waitingAt;
+    public long waitingStartTime;
 
     public User() {}
 
@@ -34,8 +37,10 @@ public class User {
         this.email = email;
         this.studentId = studentId;
         this.isWaiting = false;
+        this.isRiding = false;
         this.lastScannedStop = "";
         this.assignedShuttleId = -1;
+        this.ridingShuttleId = -1;
     }
 
     // Getters and Setters kept for compatibility with existing code
@@ -59,14 +64,20 @@ public class User {
     public void setStudentId(String studentId) { this.studentId = studentId; }
     public boolean isWaiting() { return isWaiting; }
     public void setWaiting(boolean waiting) { isWaiting = waiting; }
+    public boolean isRiding() { return isRiding; }
+    public void setRiding(boolean riding) { isRiding = riding; }
     public String getLastScannedStop() { return lastScannedStop; }
     public void setLastScannedStop(String lastScannedStop) { this.lastScannedStop = lastScannedStop; }
     public int getAssignedShuttleId() { return assignedShuttleId; }
     public void setAssignedShuttleId(int assignedShuttleId) { this.assignedShuttleId = assignedShuttleId; }
+    public int getRidingShuttleId() { return ridingShuttleId; }
+    public void setRidingShuttleId(int ridingShuttleId) { this.ridingShuttleId = ridingShuttleId; }
     public double getCurrentLat() { return currentLat; }
     public void setCurrentLat(double currentLat) { this.currentLat = currentLat; }
     public double getCurrentLng() { return currentLng; }
     public void setCurrentLng(double currentLng) { this.currentLng = currentLng; }
     public String getWaitingAt() { return waitingAt; }
     public void setWaitingAt(String waitingAt) { this.waitingAt = waitingAt; }
+    public long getWaitingStartTime() { return waitingStartTime; }
+    public void setWaitingStartTime(long waitingStartTime) { this.waitingStartTime = waitingStartTime; }
 }

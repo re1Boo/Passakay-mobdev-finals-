@@ -14,7 +14,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder> {
-
     public interface OnPickUpClickListener {
         void onPickUp(StopItem item);
     }

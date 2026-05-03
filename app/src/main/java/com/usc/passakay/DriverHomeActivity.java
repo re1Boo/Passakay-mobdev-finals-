@@ -83,6 +83,7 @@ public class DriverHomeActivity extends BaseActivity {
                     db.child("shuttles").child("3").setValue(new Shuttle(3, "GWX-103"));
                 }
             }
+
             @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
