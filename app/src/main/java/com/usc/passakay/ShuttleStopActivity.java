@@ -57,6 +57,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     private static final double DEFAULT_LAT = 10.3541;
     private static final double DEFAULT_LNG = 123.9115;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1002;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1003;
 
     private MapView mapView;
     private GoogleMap googleMap;
@@ -117,8 +118,24 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         loadData();
         setupBottomNav();
         startLocationUpdates();
+        startNotificationService();
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> isFirstLoad = false, 3000);
+    }
+
+    private void startNotificationService() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST_CODE);
+            }
+        }
+        
+        Intent serviceIntent = new Intent(this, NotificationService.class);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
     }
 
     private void pickUpPassengers(StopItem stopItem) {
@@ -287,6 +304,10 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
 
     private void stopDriving() {
         if (shuttleId == null) return;
+        
+        // Stop the background notification service
+        stopService(new Intent(this, NotificationService.class));
+
         DatabaseReference shuttleRef = db.child("shuttles").child(shuttleId);
         shuttleRef.child("status").setValue("Standby");
         shuttleRef.child("driverId").setValue("");
