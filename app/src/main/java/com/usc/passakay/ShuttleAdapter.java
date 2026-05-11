@@ -193,9 +193,27 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
                 holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
                 holder.btnStatus.setAlpha(1.0f);
                 holder.btnStatus.setOnClickListener(v -> {
-                    context.startActivity(new Intent(context, ShuttleStopActivity.class)
-                            .putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, shuttle.getBusName())
-                            .putExtra("shuttleId", shuttle.getShuttleId()));
+                    // Restriction: Even if deployed, only the assigned driver should enter
+                    String uid = FirebaseAuth.getInstance().getUid();
+                    if (uid == null) return;
+
+                    db.child("users").child(uid).child("assignedShuttleId").addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            Integer assignedId = snapshot.getValue(Integer.class);
+                            int targetId = -1;
+                            try { targetId = Integer.parseInt(shuttle.getShuttleId()); } catch (Exception ignored) {}
+
+                            if (assignedId != null && assignedId == targetId) {
+                                context.startActivity(new Intent(context, ShuttleStopActivity.class)
+                                        .putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, shuttle.getBusName())
+                                        .putExtra("shuttleId", shuttle.getShuttleId()));
+                            } else {
+                                Toast.makeText(context, "Unauthorized: You are not assigned to this shuttle.", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                        @Override public void onCancelled(@NonNull DatabaseError error) {}
+                    });
                 });
             }
             
@@ -263,6 +281,15 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 User user = snapshot.getValue(User.class);
                 if (user == null) return;
+
+                // Restriction: Ensure the driver can only deploy their assigned shuttle
+                int targetId = -1;
+                try { targetId = Integer.parseInt(shuttle.getShuttleId()); } catch (Exception ignored) {}
+
+                if (user.getAssignedShuttleId() != targetId) {
+                    Toast.makeText(context, "You are only authorized to drive Bus " + user.getAssignedShuttleId(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
                 Map<String, Object> updates = new HashMap<>();
                 updates.put("active", true);
