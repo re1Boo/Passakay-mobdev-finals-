@@ -2,9 +2,11 @@ package com.usc.passakay;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.location.Location;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -26,6 +28,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleViewHolder> {
@@ -35,12 +38,55 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     private int expandedPosition = -1;
     private DatabaseReference db;
     private final boolean isPassengerView;
+    private double userLat, userLng;
+    private final List<ShuttleStop> cachedStops = new ArrayList<>();
 
     public ShuttleAdapter(Context context, List<ShuttleItem> shuttleList, FragmentManager fragmentManager) {
         this.context = context;
         this.shuttleList = shuttleList;
         this.db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
         this.isPassengerView = context instanceof PassengerHomeActivity;
+        
+        loadStops();
+    }
+
+    private void loadStops() {
+        db.child("shuttleStops").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                cachedStops.clear();
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    ShuttleStop stop = ds.getValue(ShuttleStop.class);
+                    if (stop != null) cachedStops.add(stop);
+                }
+                // Sort by route order
+                cachedStops.sort((s1, s2) -> Integer.compare(getRouteOrder(s1.getStopName()), getRouteOrder(s2.getStopName())));
+                notifyDataSetChanged();
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
+    private int getRouteOrder(String stopName) {
+        if (stopName == null) return 99;
+        String name = stopName.toLowerCase();
+        if (name.contains("bunzel")) return 1;
+        if (name.contains("portal")) return 2;
+        if (name.contains("dorm"))   return 3;
+        if (name.contains("pe"))     return 4;
+        if (name.contains("shcp"))   return 5;
+        if (name.contains("lrc"))    return 6;
+        if (name.contains("mr"))     return 7;
+        if (name.contains("safad"))  return 8;
+        if (name.contains("chapel")) return 9;
+        if (name.contains("among"))  return 10;
+        return 99;
+    }
+
+    public void updateUserLocation(double lat, double lng) {
+        this.userLat = lat;
+        this.userLng = lng;
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -61,29 +107,40 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         holder.tvPlateNumber.setText("Plate: " + shuttle.getPlateNumber());
 
         if (isPassengerView && holder.tvEta != null) {
-            holder.tvEta.setText(String.valueOf(shuttle.getEta()));
-            if (holder.etaBadge != null) {
-                if (!shuttle.isAvailable()) {
-                    holder.etaBadge.setBackgroundResource(R.drawable.rounded_gray_badge);
-                    holder.tvEta.setText("0");
-                } else {
-                    holder.etaBadge.setBackgroundResource(R.drawable.rounded_yellow_badge);
-                }
+            if (!shuttle.isAvailable()) {
+                holder.tvEta.setText("0");
+                if (holder.etaBadge != null) holder.etaBadge.setBackgroundResource(R.drawable.rounded_gray_badge);
+            } else {
+                holder.tvEta.setText(String.valueOf(shuttle.getEta()));
+                if (holder.etaBadge != null) holder.etaBadge.setBackgroundResource(R.drawable.rounded_yellow_badge);
             }
         }
 
         if (!shuttle.isAvailable()) {
             holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
             holder.tvBusName.setTextColor(Color.parseColor("#757575"));
+            // Hide progress info if offline
+            if (isPassengerView) {
+                for (View v : holder.progressStops) {
+                    if (v != null) {
+                        v.findViewById(R.id.viewUserDot).setVisibility(View.GONE);
+                        v.findViewById(R.id.ivShuttleIcon).setVisibility(View.GONE);
+                    }
+                }
+            }
         } else {
             holder.cardShuttle.setCardBackgroundColor(Color.WHITE);
             holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
+            
+            if (isPassengerView) {
+                updateProgressIndicators(holder, shuttle);
+            }
         }
 
         if (holder.cardMap != null) {
             holder.cardMap.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
             if (isExpanded) {
-                holder.bindMap(shuttle);
+                holder.bindMap(shuttle, userLat, userLng);
             }
         }
 
@@ -103,6 +160,48 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         });
     }
 
+    private void updateProgressIndicators(ShuttleViewHolder holder, ShuttleItem shuttle) {
+        if (cachedStops.isEmpty()) return;
+
+        int shuttleNearestIdx = findNearestStopIndex(shuttle.getDriverLat(), shuttle.getDriverLng());
+        int userNearestIdx = (userLat != 0) ? findNearestStopIndex(userLat, userLng) : -1;
+
+        for (int i = 0; i < holder.progressStops.length; i++) {
+            View stopView = holder.progressStops[i];
+            if (stopView == null) continue;
+
+            if (i < cachedStops.size()) {
+                stopView.setVisibility(View.VISIBLE);
+                TextView tvLabel = stopView.findViewById(R.id.tvStopLabel);
+                tvLabel.setText(cachedStops.get(i).getStopName());
+                tvLabel.setVisibility(View.VISIBLE);
+
+                stopView.findViewById(R.id.ivShuttleIcon).setVisibility(i == shuttleNearestIdx ? View.VISIBLE : View.GONE);
+                stopView.findViewById(R.id.viewUserDot).setVisibility(i == userNearestIdx ? View.VISIBLE : View.GONE);
+            } else {
+                stopView.setVisibility(View.INVISIBLE);
+            }
+        }
+    }
+
+    private int findNearestStopIndex(double lat, double lng) {
+        int nearestIdx = -1;
+        float minDist = Float.MAX_VALUE;
+
+        // Only consider the first 8 stops as that's what's in the UI
+        int limit = Math.min(cachedStops.size(), 8);
+        for (int i = 0; i < limit; i++) {
+            ShuttleStop stop = cachedStops.get(i);
+            float[] results = new float[1];
+            Location.distanceBetween(lat, lng, stop.getLatitude(), stop.getLongitude(), results);
+            if (results[0] < minDist) {
+                minDist = results[0];
+                nearestIdx = i;
+            }
+        }
+        return nearestIdx;
+    }
+
     @Override
     public int getItemCount() {
         return shuttleList.size();
@@ -115,6 +214,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         MapView mapView;
         GoogleMap googleMap;
         ShuttleItem currentShuttle;
+        double userLat, userLng;
+        View[] progressStops = new View[8];
         DatabaseReference db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
         ShuttleViewHolder(@NonNull View itemView) {
@@ -128,6 +229,15 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             cardMap = itemView.findViewById(R.id.cardMap);
             mapView = itemView.findViewById(R.id.mapView);
 
+            progressStops[0] = itemView.findViewById(R.id.stop1);
+            progressStops[1] = itemView.findViewById(R.id.stop2);
+            progressStops[2] = itemView.findViewById(R.id.stop3);
+            progressStops[3] = itemView.findViewById(R.id.stop4);
+            progressStops[4] = itemView.findViewById(R.id.stop5);
+            progressStops[5] = itemView.findViewById(R.id.stop6);
+            progressStops[6] = itemView.findViewById(R.id.stop7);
+            progressStops[7] = itemView.findViewById(R.id.stop8);
+
             if (mapView != null) {
                 mapView.onCreate(null);
                 mapView.getMapAsync(this);
@@ -137,30 +247,42 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         @Override
         public void onMapReady(GoogleMap googleMap) {
             this.googleMap = googleMap;
-            googleMap.getUiSettings().setAllGesturesEnabled(true); // ENABLE GESTURES
+            googleMap.getUiSettings().setAllGesturesEnabled(true);
             googleMap.getUiSettings().setZoomControlsEnabled(true);
             MapsInitializer.initialize(itemView.getContext());
             updateMapContents();
         }
 
-        void bindMap(ShuttleItem shuttle) {
+        void bindMap(ShuttleItem shuttle, double uLat, double uLng) {
             currentShuttle = shuttle;
+            userLat = uLat;
+            userLng = uLng;
             if (mapView != null) mapView.onResume();
-
             updateMapContents();
         }
 
         private void updateMapContents() {
             if (googleMap == null || currentShuttle == null) return;
             googleMap.clear();
-            
+
+            if (!currentShuttle.isAvailable()) {
+                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(10.3541, 123.9115), 16));
+                return;
+            }
+
             LatLng shuttleLocation = new LatLng(currentShuttle.getDriverLat(), currentShuttle.getDriverLng());
             googleMap.addMarker(new MarkerOptions()
                     .position(shuttleLocation)
                     .title(currentShuttle.getBusName())
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
-            
-            // LOAD STOPS
+
+            if (userLat != 0) {
+                googleMap.addMarker(new MarkerOptions()
+                        .position(new LatLng(userLat, userLng))
+                        .title("Me")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+            }
+
             db.child("shuttleStops").addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -174,8 +296,7 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
                         }
                     }
                 }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {}
+                @Override public void onCancelled(@NonNull DatabaseError error) {}
             });
 
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(shuttleLocation, 16));

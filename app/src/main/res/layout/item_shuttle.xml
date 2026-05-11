@@ -75,57 +75,46 @@
                     android:textColor="#444444"
                     android:layout_marginTop="2dp"/>
 
-                <!-- Stop Progress Simulation UI -->
+                <!-- Stop Progress UI -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp">
+                    android:layout_marginTop="24dp"
+                    android:paddingBottom="12dp">
 
+                    <!-- Connecting Line -->
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="2dp"
-                        android:background="#757575"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="4dp"
-                        android:layout_marginEnd="4dp"/>
+                        android:background="#BDBDBD"
+                        android:layout_marginTop="34dp"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"/>
 
                     <LinearLayout
+                        android:id="@+id/containerStops"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:weightSum="8"
-                        android:gravity="center_vertical">
+                        android:weightSum="8">
 
-                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-                        <ImageView android:layout_width="20dp" android:layout_height="12dp" android:src="@drawable/bus" android:tint="#FFEA08" />
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                        <!-- Stop 1: Portal -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+                        <!-- Stop 2: Dorm -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+                        <!-- Stop 3: PE -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+                        <!-- Stop 4: SHCP -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+                        <!-- Stop 5: LRC -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+                        <!-- Stop 6: MR -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+                        <!-- Stop 7: SAFAD -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop7" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+                        <!-- Stop 8: Chapel -->
+                        <include layout="@layout/view_shuttle_progress_stop" android:id="@+id/stop8" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
 
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:gravity="center">
-                            <View android:layout_width="10dp" android:layout_height="10dp" android:background="@drawable/loading_dot" android:backgroundTint="#FF5722" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="You"
-                                android:textSize="10sp"
-                                android:textStyle="bold"
-                                android:textColor="#1A1A1A"/>
-                        </LinearLayout>
-
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/loading_dot" android:backgroundTint="#FFEA08" />
                     </LinearLayout>
                 </RelativeLayout>
 

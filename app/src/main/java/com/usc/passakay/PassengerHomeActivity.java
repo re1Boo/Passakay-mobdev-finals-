@@ -11,9 +11,7 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -68,7 +66,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private DatabaseReference db;
     
     private MaterialButton btnWaitingStatus, btnCancelRide;
-    private TextView tvUserLoc, tvNextStop, tvAnnouncement;
+    private TextView tvUserLoc, tvNextStop;
     private LinearLayout layoutTripProgress;
     private ProgressBar progressBarTrip;
     
@@ -77,7 +75,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private String waitingAtStopName = "";
     private int ridingShuttleId = -1;
     private long outOfRadiusStartTime = 0;
-    private String lastDismissedAnnouncementId = "";
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -102,7 +99,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         btnCancelRide = findViewById(R.id.btnCancelRide);
         tvUserLoc = findViewById(R.id.tvUserLoc);
         tvNextStop = findViewById(R.id.tvNextStop);
-        tvAnnouncement = findViewById(R.id.tvAnnouncement);
         layoutTripProgress = findViewById(R.id.layoutTripProgress);
         progressBarTrip = findViewById(R.id.progressBarTrip);
 
@@ -120,7 +116,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         findViewById(R.id.fabScanQR).setOnClickListener(v -> startActivity(new Intent(this, ScannerActivity.class)));
         findViewById(R.id.fabMyLocation).setOnClickListener(v -> panToMyLocation());
 
-        loadAnnouncements();
         loadShuttles();
         setupBottomNav();
         startLocationUpdates();
@@ -161,11 +156,35 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             layoutTripProgress.setVisibility(View.GONE);
             btnCancelRide.setVisibility(View.VISIBLE);
             btnCancelRide.setText("CANCEL WAITING");
+            if (!waitingAtStopName.isEmpty()) {
+                tvUserLoc.setText("Waiting at: " + waitingAtStopName);
+            }
         } else {
             btnWaitingStatus.setText("NOT WAITING");
             btnWaitingStatus.setBackgroundTintList(ColorStateList.valueOf(0xFFFFEA08)); 
             layoutTripProgress.setVisibility(View.GONE);
             btnCancelRide.setVisibility(View.GONE);
+            updateNearestStopLabel();
+        }
+    }
+
+    private void updateNearestStopLabel() {
+        if (userLat == 0 || allStops.isEmpty() || isWaiting || isRiding) return;
+
+        ShuttleStop nearest = null;
+        float minDist = Float.MAX_VALUE;
+
+        for (ShuttleStop stop : allStops) {
+            float[] results = new float[1];
+            Location.distanceBetween(userLat, userLng, stop.getLatitude(), stop.getLongitude(), results);
+            if (results[0] < minDist) {
+                minDist = results[0];
+                nearest = stop;
+            }
+        }
+
+        if (nearest != null) {
+            tvUserLoc.setText("Nearest Stop: " + nearest.getStopName());
         }
     }
 
@@ -264,7 +283,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
-        // If waiting at a stop, remove from scans
         if (isWaiting && !waitingAtStopName.isEmpty()) {
             db.child("scans").child(getScanKey(waitingAtStopName)).child(uid).removeValue();
         }
@@ -305,6 +323,10 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                         userLat = location.getLatitude();
                         userLng = location.getLongitude();
                         updateUserLocationInDB(userLat, userLng);
+                        updateNearestStopLabel();
+                        if (shuttleAdapter != null) {
+                            shuttleAdapter.updateUserLocation(userLat, userLng);
+                        }
                     }
                 }
             }
@@ -339,135 +361,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         }
     }
 
-    private void loadAnnouncements() {
-        View card = findViewById(R.id.cardAnnouncement);
-        View btnDismiss = findViewById(R.id.ivDismissAnnouncement);
-        
-        if (btnDismiss != null && card != null) {
-            btnDismiss.setOnClickListener(v -> {
-                Log.d("Announcement", "Dismiss clicked. Message: " + (tvAnnouncement != null ? tvAnnouncement.getText() : "null"));
-                card.setVisibility(View.GONE);
-                if (tvAnnouncement != null) {
-                    lastDismissedAnnouncementId = tvAnnouncement.getText().toString();
-                }
-            });
-            
-            // Also allow clicking the card to see history
-            card.setOnClickListener(v -> showAnnouncementHistory());
-        }
-
-        db.child("announcements").child("current").addValueEventListener(new ValueEventListener() {
-            private String lastMessage = "";
-
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    String message = snapshot.child("message").getValue(String.class);
-                    String priority = snapshot.child("priority").getValue(String.class);
-                    Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
-
-                    if (expiresAt != null && System.currentTimeMillis() > expiresAt) {
-                        if (card != null) card.setVisibility(View.GONE);
-                        return;
-                    }
-
-                    // Reset dismissal if it's a completely NEW message compared to the last one we saw
-                    if (message != null && !message.equals(lastMessage)) {
-                        lastDismissedAnnouncementId = "";
-                        lastMessage = message;
-                        
-                        // Vibrate for new messages
-                        android.os.Vibrator v = (android.os.Vibrator) getSystemService(android.content.Context.VIBRATOR_SERVICE);
-                        if (v != null) v.vibrate(300);
-                    }
-
-                    // If user manually dismissed THIS exact message, keep it hidden
-                    if (message != null && message.equals(lastDismissedAnnouncementId)) {
-                        Log.d("Announcement", "Keeping hidden because it was manually dismissed.");
-                        if (card != null) card.setVisibility(View.GONE);
-                        return;
-                    }
-
-                    if (tvAnnouncement != null) {
-                        tvAnnouncement.setText(message);
-                        tvAnnouncement.setSelected(true);
-                    }
-                    
-                    if (card != null) {
-                        Log.d("Announcement", "Showing announcement card.");
-                        card.setVisibility(View.VISIBLE);
-                    }
-
-                    long currentTimestamp = snapshot.child("timestamp").getValue(Long.class) != null ? snapshot.child("timestamp").getValue(Long.class) : 0;
-                    if (findViewById(R.id.tvNewBadge) != null) {
-                        if (currentTimestamp > 0 && (System.currentTimeMillis() - currentTimestamp) < (2 * 60 * 1000)) {
-                            findViewById(R.id.tvNewBadge).setVisibility(android.view.View.VISIBLE);
-                        } else {
-                            findViewById(R.id.tvNewBadge).setVisibility(android.view.View.GONE);
-                        }
-                    }
-
-                    if (currentTimestamp > 0 && findViewById(R.id.tvAnnouncementTime) != null) {
-                        TextView tvTime = findViewById(R.id.tvAnnouncementTime);
-                        tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(currentTimestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
-                    }
-
-                    if (card instanceof androidx.cardview.widget.CardView) {
-                        androidx.cardview.widget.CardView cardView = (androidx.cardview.widget.CardView) card;
-                        if ("warning".equals(priority)) {
-                            cardView.setCardBackgroundColor(android.graphics.Color.parseColor("#FFE0B2")); 
-                        } else if ("emergency".equals(priority)) {
-                            cardView.setCardBackgroundColor(android.graphics.Color.parseColor("#FFCDD2")); 
-                            android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
-                            pulse.setDuration(800);
-                            pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
-                            pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
-                            cardView.startAnimation(pulse);
-                        } else {
-                            cardView.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF9C4")); 
-                            cardView.clearAnimation();
-                        }
-                    }
-                } else {
-                    if (findViewById(R.id.cardAnnouncement) != null)
-                        findViewById(R.id.cardAnnouncement).setVisibility(android.view.View.GONE);
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError error) {}
-        });
-    }
-
-    private void showAnnouncementHistory() {
-        db.child("announcements").child("history").limitToLast(10).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (!snapshot.exists()) return;
-
-                java.util.List<java.util.Map<String, Object>> historyData = new java.util.ArrayList<>();
-                for (DataSnapshot ds : snapshot.getChildren()) {
-                    java.util.Map<String, Object> map = (java.util.Map<String, Object>) ds.getValue();
-                    if (map != null) historyData.add(0, map); 
-                }
-
-                AnnouncementHistoryAdapter adapter = new AnnouncementHistoryAdapter(PassengerHomeActivity.this, historyData, null);
-                
-                RecyclerView rv = new RecyclerView(PassengerHomeActivity.this);
-                rv.setLayoutManager(new LinearLayoutManager(PassengerHomeActivity.this));
-                rv.setAdapter(adapter);
-                rv.setPadding(20, 20, 20, 20);
-
-                android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(PassengerHomeActivity.this);
-                builder.setTitle("Recent Announcements");
-                builder.setView(rv);
-                builder.setPositiveButton("Close", null);
-                builder.show();
-            }
-            @Override public void onCancelled(DatabaseError error) {}
-        });
-    }
-
     private void loadShuttles() {
         db.child("shuttles").addValueEventListener(new ValueEventListener() {
             @Override
@@ -494,7 +387,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             googleMap.setMyLocationEnabled(true);
         }
         
-        // Initial center on campus
         LatLng campus = new LatLng(USC_LAT, USC_LNG);
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(campus, 16.5f));
         
@@ -514,6 +406,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     }
                 }
                 updateMapMarkers();
+                updateNearestStopLabel();
                 new Handler(Looper.getMainLooper()).postDelayed(() -> zoomToFitAll(), 1500); 
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {}
@@ -550,7 +443,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             }
         }
         
-        // Only include stops to keep map centered on campus even if user is far away
         if (validPoints == 0) {
              googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(USC_LAT, USC_LNG), 16.5f));
              return;
@@ -567,7 +459,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private void updateMapMarkers() {
         if (googleMap == null) return;
         
-        // 1. Update Stop Markers
         for (ShuttleStop stop : allStops) {
             int count = stopWaitingCounts.getOrDefault(stop.getStopName(), 0);
             Bitmap icon = createMarkerBitmap(stop.getStopName(), count);
@@ -582,7 +473,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             }
         }
 
-        // 2. Update User Marker
         if (userLat != 0) {
             LatLng userPos = new LatLng(userLat, userLng);
             if (userMarker == null) {
@@ -593,7 +483,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             }
         }
 
-        // 3. Update Shuttle Markers
         for (ShuttleItem s : shuttleList) {
             if (s.isAvailable()) {
                 LatLng pos = new LatLng(s.getDriverLat(), s.getDriverLng());
@@ -617,13 +506,11 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         TextView tvName = markerView.findViewById(R.id.tvMarkerName);
         TextView tvCount = markerView.findViewById(R.id.tvMarkerWaiting);
         View viewDot = markerView.findViewById(R.id.viewDot);
-        ImageView ivPin = markerView.findViewById(R.id.ivMarkerPin);
 
         if (tvName != null) tvName.setText(name);
         if (tvCount != null) {
             tvCount.setText(String.valueOf(count));
             
-            // Apply color logic: Green if > 0, Grey if 0
             int greenColor = Color.parseColor("#4CAF50");
             int greyColor  = Color.parseColor("#9E9E9E");
             int colorToApply = (count > 0) ? greenColor : greyColor;
@@ -636,9 +523,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 } else {
                     viewDot.setBackgroundColor(colorToApply);
                 }
-            }
-            if (ivPin != null) {
-                ivPin.setColorFilter(colorToApply);
             }
         }
 

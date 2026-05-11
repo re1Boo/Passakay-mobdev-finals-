@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- Stop Label (Hidden by default) -->
+    <TextView
+        android:id="@+id/tvStopLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Portal"
+        android:textSize="9sp"
+        android:textColor="#1A1A1A"
+        android:textStyle="bold"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="4dp"
+        android:visibility="invisible"
+        android:gravity="center"
+        android:maxLines="2"
+        android:ellipsize="end"/>
+
+    <!-- The Dot and Icons -->
+    <FrameLayout
+        android:id="@+id/dotContainer"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_below="@id/tvStopLabel"
+        android:layout_centerHorizontal="true">
+
+        <!-- Default Stop Dot -->
+        <View
+            android:id="@+id/viewStopDot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_gravity="center"
+            android:background="@drawable/loading_dot"
+            android:backgroundTint="#BDBDBD" />
+
+        <!-- User Location Red Dot (Hidden by default) -->
+        <View
+            android:id="@+id/viewUserDot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_gravity="center"
+            android:background="@drawable/loading_dot"
+            android:backgroundTint="#F44336"
+            android:visibility="gone" />
+
+        <!-- Shuttle Icon (Hidden by default) -->
+        <ImageView
+            android:id="@+id/ivShuttleIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_shuttle"
+            app:tint="#FFEA08"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+</RelativeLayout>
