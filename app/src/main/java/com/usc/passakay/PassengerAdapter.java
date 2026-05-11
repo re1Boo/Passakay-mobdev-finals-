@@ -51,18 +51,27 @@ public class PassengerAdapter extends RecyclerView.Adapter<PassengerAdapter.View
 
     private String maskPart(String s) {
         if (s == null || s.isEmpty()) return "";
-        if (s.length() <= 1) return s;
+        int length = s.length();
+        if (length <= 2) return s;
+        
+        // Show ~40% of the name, mask the rest
+        int visibleCount = Math.max(2, (int) Math.ceil(length * 0.4));
         StringBuilder sb = new StringBuilder();
-        sb.append(s.charAt(0));
-        for (int i = 1; i < s.length(); i++) sb.append("*");
+        sb.append(s.substring(0, visibleCount));
+        for (int i = visibleCount; i < length; i++) sb.append("*");
         return sb.toString();
     }
 
     private String maskId(String id) {
-        if (id == null || id.length() <= 2) return id != null ? id : "";
+        if (id == null || id.isEmpty()) return "";
+        int length = id.length();
+        if (length <= 3) return id;
+
+        // Show ~50% of the ID, mask the rest
+        int visibleCount = Math.max(3, (int) Math.ceil(length * 0.5));
         StringBuilder sb = new StringBuilder();
-        sb.append(id.substring(0, 2));
-        for (int i = 2; i < id.length(); i++) sb.append("*");
+        sb.append(id.substring(0, visibleCount));
+        for (int i = visibleCount; i < length; i++) sb.append("*");
         return sb.toString();
     }
 
