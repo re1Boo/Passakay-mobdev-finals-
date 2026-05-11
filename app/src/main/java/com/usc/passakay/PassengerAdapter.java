@@ -1,7 +1,6 @@
 package com.usc.passakay;
 
 import android.content.Context;
-import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,8 +8,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.bumptech.glide.Glide;
 
 import java.util.List;
 
@@ -36,31 +33,37 @@ public class PassengerAdapter extends RecyclerView.Adapter<PassengerAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         User p = passengers.get(position);
-        holder.tvName.setText(p.getFirstName() + " " + p.getLastName());
         
-        // Show ID Number instead of a hardcoded "Passenger" label
+        // Censor Name for Privacy (e.g., John Doe -> J*** D**)
+        String censoredName = maskPart(p.getFirstName()) + " " + maskPart(p.getLastName());
+        holder.tvName.setText(censoredName);
+        
+        // Censor ID Number for Privacy (e.g., 21101234 -> 21******)
         if (p.getStudentId() != null && !p.getStudentId().isEmpty()) {
-            holder.tvCourse.setText("ID: " + p.getStudentId());
+            holder.tvCourse.setText("ID: " + maskId(p.getStudentId()));
         } else {
             holder.tvCourse.setText("Verified Passenger");
         }
 
-        String photoStr = p.getProfileImageUrl();
-        if (photoStr != null && !photoStr.isEmpty()) {
-            try {
-                // Decode Base64 string for Glide
-                byte[] imageBytes = Base64.decode(photoStr, Base64.DEFAULT);
-                Glide.with(context)
-                        .asBitmap()
-                        .load(imageBytes)
-                        .placeholder(R.drawable.ic_default_profile)
-                        .into(holder.ivPhoto);
-            } catch (Exception e) {
-                holder.ivPhoto.setImageResource(R.drawable.ic_default_profile);
-            }
-        } else {
-            holder.ivPhoto.setImageResource(R.drawable.ic_default_profile);
-        }
+        // Hide Profile Image for Privacy - Always use default icon
+        holder.ivPhoto.setImageResource(R.drawable.ic_default_profile);
+    }
+
+    private String maskPart(String s) {
+        if (s == null || s.isEmpty()) return "";
+        if (s.length() <= 1) return s;
+        StringBuilder sb = new StringBuilder();
+        sb.append(s.charAt(0));
+        for (int i = 1; i < s.length(); i++) sb.append("*");
+        return sb.toString();
+    }
+
+    private String maskId(String id) {
+        if (id == null || id.length() <= 2) return id != null ? id : "";
+        StringBuilder sb = new StringBuilder();
+        sb.append(id.substring(0, 2));
+        for (int i = 2; i < id.length(); i++) sb.append("*");
+        return sb.toString();
     }
 
     @Override
