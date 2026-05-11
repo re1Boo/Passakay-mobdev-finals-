@@ -98,7 +98,6 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
             if (pickUpListener != null) {
                 pickUpListener.onPickUp(stop);
             }
-            clearWaitingStatusAtStop(stop.getStopName());
         });
     }
 
@@ -120,24 +119,6 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.StopViewHolder
                 }
                 rv.setLayoutManager(new LinearLayoutManager(context));
                 rv.setAdapter(new PassengerAdapter(context, passengers));
-            }
-            @Override public void onCancelled(@NonNull DatabaseError error) {}
-        });
-    }
-
-    private void clearWaitingStatusAtStop(String stopName) {
-        db.child("users").addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot ds : snapshot.getChildren()) {
-                    String userStop = ds.child("lastScannedStop").getValue(String.class);
-                    if (userStop != null && isMatch(userStop, stopName)) {
-                        ds.getRef().child("isWaiting").setValue(false);
-                        ds.getRef().child("lastScannedStop").setValue("");
-                        ds.getRef().child("waitingAt").setValue("");
-                    }
-                }
-                // No need for Toast here as Reilly's listener handles it
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {}
         });

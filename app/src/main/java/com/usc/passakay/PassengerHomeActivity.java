@@ -284,7 +284,21 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         if (uid == null) return;
 
         if (isWaiting && !waitingAtStopName.isEmpty()) {
-            db.child("scans").child(getScanKey(waitingAtStopName)).child(uid).removeValue();
+            String stopKey = getScanKey(waitingAtStopName);
+            db.child("scans").child(stopKey).child(uid).removeValue();
+            
+            // Decrement the waiting count for this stop atomically
+            db.child("stopWaitingCounts").child(stopKey).runTransaction(new com.google.firebase.database.Transaction.Handler() {
+                @NonNull
+                @Override
+                public com.google.firebase.database.Transaction.Result doTransaction(@NonNull com.google.firebase.database.MutableData mutableData) {
+                    Integer count = mutableData.getValue(Integer.class);
+                    if (count != null && count > 0) mutableData.setValue(count - 1);
+                    return com.google.firebase.database.Transaction.success(mutableData);
+                }
+                @Override
+                public void onComplete(com.google.firebase.database.DatabaseError databaseError, boolean b, com.google.firebase.database.DataSnapshot dataSnapshot) {}
+            });
         }
 
         DatabaseReference ref = db.child("users").child(uid);
@@ -351,12 +365,10 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private void updateWaitingStatusInDB(boolean waiting) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid != null) {
-            db.child("users").child(uid).child("isWaiting").setValue(waiting);
             if (!waiting) {
-                if (!waitingAtStopName.isEmpty()) {
-                    db.child("scans").child(getScanKey(waitingAtStopName)).child(uid).removeValue();
-                }
-                db.child("users").child(uid).child("waitingAt").setValue("");
+                clearStatusInDB();
+            } else {
+                db.child("users").child(uid).child("isWaiting").setValue(true);
             }
         }
     }
@@ -369,9 +381,11 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 for (DataSnapshot child : snapshot.getChildren()) {
                     Shuttle s = child.getValue(Shuttle.class);
                     if (s != null) {
-                        // Load ALL shuttles so they can be shown in the list (active or grayed out)
+                        // A shuttle is "Available" (Online) only if it is active AND has an assigned driver
+                        boolean isOnline = s.isActive() && s.getDriverId() != null && !s.getDriverId().isEmpty();
+                        
                         shuttleList.add(new ShuttleItem(String.valueOf(s.getShuttleId()), "Bus " + s.getShuttleId(), 
-                            s.getDriverName(), s.getPlateNumber(), 5, s.isActive(), s.getCurrentLat(), s.getCurrentLng()));
+                            s.getDriverName(), s.getPlateNumber(), 5, isOnline, s.getCurrentLat(), s.getCurrentLng()));
                     }
                 }
                 shuttleAdapter.notifyDataSetChanged();
@@ -415,10 +429,12 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     }
 
     private void fetchWaitingCount(String stopName) {
-        db.child("scans").child(getScanKey(stopName)).addValueEventListener(new ValueEventListener() {
+        String stopKey = getScanKey(stopName);
+        db.child("stopWaitingCounts").child(stopKey).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                int count = (int) snapshot.getChildrenCount();
+                Integer countObj = snapshot.getValue(Integer.class);
+                int count = countObj != null ? countObj : 0;
                 stopWaitingCounts.put(stopName, count);
                 updateMapMarkers();
             }

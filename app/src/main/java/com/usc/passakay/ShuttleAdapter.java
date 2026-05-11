@@ -1,13 +1,16 @@
 package com.usc.passakay;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.location.Location;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
@@ -22,6 +25,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -29,7 +33,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleViewHolder> {
 
@@ -117,22 +123,86 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         }
 
         if (!shuttle.isAvailable()) {
-            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#E0E0E0"));
-            holder.tvBusName.setTextColor(Color.parseColor("#757575"));
+            holder.cardShuttle.setCardBackgroundColor(Color.parseColor("#EEEEEE"));
+            holder.cardShuttle.setAlpha(0.7f);
+            holder.tvBusName.setTextColor(Color.parseColor("#9E9E9E"));
+            holder.tvDriverName.setTextColor(Color.parseColor("#9E9E9E"));
+            holder.tvPlateNumber.setTextColor(Color.parseColor("#9E9E9E"));
+            
+            if (holder.ivBusIcon != null) {
+                holder.ivBusIcon.setAlpha(0.3f);
+            }
+
+            if (isPassengerView && holder.tvEta != null) {
+                holder.tvEta.setText("--");
+                holder.tvEta.setTextColor(Color.parseColor("#9E9E9E"));
+                if (holder.etaBadge != null) {
+                    holder.etaBadge.setBackgroundResource(R.drawable.rounded_gray_badge);
+                    holder.etaBadge.setAlpha(0.5f);
+                }
+            }
+
+            // For Driver view, if it's standby, show it differently
+            if (!isPassengerView && holder.btnStatus != null) {
+                if (shuttle.isStandby()) {
+                    holder.btnStatus.setText("Standby");
+                    holder.btnStatus.setBackgroundResource(R.drawable.rounded_green_badge);
+                    holder.btnStatus.setAlpha(1.0f);
+                    holder.btnStatus.setOnClickListener(v -> deployShuttle(shuttle));
+                } else {
+                    holder.btnStatus.setText("Unavailable");
+                    holder.btnStatus.setBackgroundResource(R.drawable.rounded_gray_badge);
+                    holder.btnStatus.setAlpha(1.0f);
+                    holder.btnStatus.setOnClickListener(null);
+                }
+            }
+
             // Hide progress info if offline
             if (isPassengerView) {
                 for (View v : holder.progressStops) {
                     if (v != null) {
                         v.findViewById(R.id.viewUserDot).setVisibility(View.GONE);
                         v.findViewById(R.id.ivShuttleIcon).setVisibility(View.GONE);
+                        v.setAlpha(0.3f);
                     }
                 }
             }
         } else {
             holder.cardShuttle.setCardBackgroundColor(Color.WHITE);
+            holder.cardShuttle.setAlpha(1.0f);
             holder.tvBusName.setTextColor(Color.parseColor("#1A1A1A"));
+            holder.tvDriverName.setTextColor(Color.parseColor("#444444"));
+            holder.tvPlateNumber.setTextColor(Color.parseColor("#444444"));
+            
+            if (holder.ivBusIcon != null) {
+                holder.ivBusIcon.setAlpha(1.0f);
+            }
+
+            if (isPassengerView && holder.tvEta != null) {
+                holder.tvEta.setText(String.valueOf(shuttle.getEta()));
+                holder.tvEta.setTextColor(Color.parseColor("#1A1A1A"));
+                if (holder.etaBadge != null) {
+                    holder.etaBadge.setBackgroundResource(R.drawable.rounded_yellow_badge);
+                    holder.etaBadge.setAlpha(1.0f);
+                }
+            }
+
+            // For Driver view
+            if (!isPassengerView && holder.btnStatus != null) {
+                holder.btnStatus.setText("Deployed");
+                holder.btnStatus.setBackgroundResource(R.drawable.rounded_yellow_badge);
+                holder.btnStatus.setAlpha(1.0f);
+                holder.btnStatus.setOnClickListener(v -> {
+                    context.startActivity(new Intent(context, ShuttleStopActivity.class)
+                            .putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, shuttle.getBusName())
+                            .putExtra("shuttleId", shuttle.getShuttleId()));
+                });
+            }
             
             if (isPassengerView) {
+                for (View v : holder.progressStops) {
+                    if (v != null) v.setAlpha(1.0f);
+                }
                 updateProgressIndicators(holder, shuttle);
             }
         }
@@ -184,6 +254,34 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
         }
     }
 
+    private void deployShuttle(ShuttleItem shuttle) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+
+        db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user == null) return;
+
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("active", true);
+                updates.put("status", "Deployed");
+                updates.put("driverId", uid);
+                updates.put("driverName", user.getFirstName() + " " + user.getLastName());
+
+                db.child("shuttles").child(shuttle.getShuttleId()).updateChildren(updates)
+                    .addOnSuccessListener(aVoid -> {
+                        context.startActivity(new Intent(context, ShuttleStopActivity.class)
+                                .putExtra(ShuttleStopActivity.EXTRA_BUS_NAME, shuttle.getBusName())
+                                .putExtra("shuttleId", shuttle.getShuttleId()));
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(context, "Failed to deploy: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
     private int findNearestStopIndex(double lat, double lng) {
         int nearestIdx = -1;
         float minDist = Float.MAX_VALUE;
@@ -210,6 +308,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
     static class ShuttleViewHolder extends RecyclerView.ViewHolder implements OnMapReadyCallback {
         TextView tvBusName, tvDriverName, tvPlateNumber, tvEta;
         View etaBadge;
+        ImageView ivBusIcon;
+        Button btnStatus;
         CardView cardShuttle, cardMap;
         MapView mapView;
         GoogleMap googleMap;
@@ -225,6 +325,8 @@ public class ShuttleAdapter extends RecyclerView.Adapter<ShuttleAdapter.ShuttleV
             tvPlateNumber = itemView.findViewById(R.id.tvPlateNumber);
             tvEta = itemView.findViewById(R.id.tvEta);
             etaBadge = itemView.findViewById(R.id.etaBadge);
+            ivBusIcon = itemView.findViewById(R.id.ivBusIcon);
+            btnStatus = itemView.findViewById(R.id.btnStatus);
             cardShuttle = itemView.findViewById(R.id.cardShuttle);
             cardMap = itemView.findViewById(R.id.cardMap);
             mapView = itemView.findViewById(R.id.mapView);

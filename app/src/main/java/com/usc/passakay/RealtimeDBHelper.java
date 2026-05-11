@@ -1,6 +1,7 @@
 package com.usc.passakay;
 
 import android.util.Log;
+import androidx.annotation.NonNull;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -29,7 +30,8 @@ public class RealtimeDBHelper {
         }
 
         String stopName = qrContent.replace(".com", "").trim();
-        DatabaseReference locationRef = db.child("scans").child(qrContent.replace(".", "_"));
+        String stopKey = qrContent.replace(".", "_");
+        DatabaseReference locationRef = db.child("scans").child(stopKey);
 
         long timestamp = System.currentTimeMillis();
 
@@ -39,17 +41,45 @@ public class RealtimeDBHelper {
         scanData.put("timestamp", timestamp);
 
         // Use passengerUid as the key to avoid duplicate scans and allow easy removal
-        locationRef.child(passengerUid).setValue(scanData)
-                .addOnSuccessListener(a -> {
-                    Map<String, Object> userUpdates = new HashMap<>();
-                    userUpdates.put("isWaiting", true);
-                    userUpdates.put("waitingAt", stopName);
-                    userUpdates.put("waitingStartTime", timestamp);
-                    db.child("users").child(passengerUid).updateChildren(userUpdates);
-                    
-                    onSuccess.run();
-                })
-                .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
+        locationRef.child(passengerUid).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                boolean wasAlreadyWaiting = snapshot.exists();
+                
+                locationRef.child(passengerUid).setValue(scanData)
+                        .addOnSuccessListener(a -> {
+                            Map<String, Object> userUpdates = new HashMap<>();
+                            userUpdates.put("isWaiting", true);
+                            userUpdates.put("waitingAt", stopName);
+                            userUpdates.put("waitingStartTime", timestamp);
+                            db.child("users").child(passengerUid).updateChildren(userUpdates);
+                            
+                            if (!wasAlreadyWaiting) {
+                                // Increment the waiting count only if it's a new scan for this stop
+                                db.child("stopWaitingCounts").child(stopKey).runTransaction(new com.google.firebase.database.Transaction.Handler() {
+                                    @NonNull
+                                    @Override
+                                    public com.google.firebase.database.Transaction.Result doTransaction(@NonNull com.google.firebase.database.MutableData mutableData) {
+                                        Integer count = mutableData.getValue(Integer.class);
+                                        if (count == null) mutableData.setValue(1);
+                                        else mutableData.setValue(count + 1);
+                                        return com.google.firebase.database.Transaction.success(mutableData);
+                                    }
+                                    @Override
+                                    public void onComplete(com.google.firebase.database.DatabaseError databaseError, boolean b, com.google.firebase.database.DataSnapshot dataSnapshot) {}
+                                });
+                            }
+
+                            onSuccess.run();
+                        })
+                        .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onFailure.accept(error.getMessage());
+            }
+        });
     }
 
     public void addUser(User user, Runnable onSuccess, Consumer<String> onFailure) {

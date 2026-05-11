@@ -16,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -148,30 +149,66 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     }
 
     private void pickUpPassengers(StopItem stopItem) {
+        if (stopItem.getDistanceMeters() > 100) {
+            Toast.makeText(this, "You must be closer to the stop to pick up passengers", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int count = stopItem.getWaitingCount();
+        if (count == 0) {
+            Toast.makeText(this, "No passengers waiting at this stop.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Confirm Pickup")
+                .setMessage("Are you sure you want to board all " + count + " passengers at " + stopItem.getStopName() + "?")
+                .setPositiveButton("Board All", (dialog, which) -> executeBoarding(stopItem))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void executeBoarding(StopItem stopItem) {
         String stopName = stopItem.getStopName();
-        db.child("users").orderByChild("waitingAt").equalTo(stopName)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        for (DataSnapshot userSnap : snapshot.getChildren()) {
-                            String uid = userSnap.getKey();
-                            if (uid != null) {
-                                Map<String, Object> updates = new HashMap<>();
-                                updates.put("isWaiting", false);
-                                updates.put("waitingAt", "");
-                                updates.put("isRiding", true);
-                                if (shuttleId != null) {
-                                    try { updates.put("ridingShuttleId", Integer.parseInt(shuttleId)); } 
-                                    catch (NumberFormatException ignored) {}
-                                }
-                                db.child("users").child(uid).updateChildren(updates);
-                            }
+        String stopKey = getScanKey(stopName);
+
+        db.child("scans").child(stopKey).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                Map<String, Object> childUpdates = new HashMap<>();
+                int boardingCount = 0;
+
+                for (DataSnapshot userSnap : snapshot.getChildren()) {
+                    String uid = userSnap.getKey();
+                    if (uid != null && !uid.equals("_count")) {
+                        childUpdates.put("/users/" + uid + "/isWaiting", false);
+                        childUpdates.put("/users/" + uid + "/waitingAt", "");
+                        childUpdates.put("/users/" + uid + "/isRiding", true);
+                        if (shuttleId != null) {
+                            try { childUpdates.put("/users/" + uid + "/ridingShuttleId", Integer.parseInt(shuttleId)); }
+                            catch (NumberFormatException ignored) {}
                         }
-                        db.child("scans").child(getScanKey(stopName)).removeValue();
-                        Toast.makeText(ShuttleStopActivity.this, "Passengers picked up!", Toast.LENGTH_SHORT).show();
+                        boardingCount++;
                     }
-                    @Override public void onCancelled(@NonNull DatabaseError error) {}
+                }
+
+                if (boardingCount == 0) {
+                    Toast.makeText(ShuttleStopActivity.this, "Queue updated; no passengers to board.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                childUpdates.put("/scans/" + stopKey, null);
+                childUpdates.put("/stopWaitingCounts/" + stopKey, 0);
+
+                final int finalBoardingCount = boardingCount;
+                db.updateChildren(childUpdates).addOnSuccessListener(aVoid -> {
+                    Toast.makeText(ShuttleStopActivity.this, "Successfully boarded " + finalBoardingCount + " passengers!", Toast.LENGTH_SHORT).show();
+                }).addOnFailureListener(e -> {
+                    Toast.makeText(ShuttleStopActivity.this, "Boarding failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
 
     private String getScanKey(String stopName) {
@@ -320,11 +357,16 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     }
 
     private void fetchWaitingCount(String stopName, StopItem item) {
-        db.child("scans").child(getScanKey(stopName)).addValueEventListener(new ValueEventListener() {
+        String stopKey = getScanKey(stopName);
+        db.child("stopWaitingCounts").child(stopKey).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                int count = (int) snapshot.getChildrenCount();
-                if (lastKnownCounts.get(stopName) != null && count > lastKnownCounts.get(stopName)) showPopUpNotification(count + " waiting at " + stopName);
+                Integer countObj = snapshot.getValue(Integer.class);
+                int count = countObj != null ? countObj : 0;
+                
+                if (lastKnownCounts.get(stopName) != null && count > lastKnownCounts.get(stopName)) {
+                    showPopUpNotification(count + " waiting at " + stopName);
+                }
                 lastKnownCounts.put(stopName, count);
                 item.setWaitingCount(count);
                 stopAdapter.notifyDataSetChanged();
