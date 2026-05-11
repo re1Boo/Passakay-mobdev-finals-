@@ -139,6 +139,8 @@ public class DataSeeder {
         createUser("driver@passakay.com", "password123", "20000001", "driver", 1);
         createUser("driver1@passakay.com", "password123", "D001", "driver", 1);
         createUser("driver2@passakay.com", "password123", "D002", "driver", 2);
+        createUser("driver3@passakay.com", "password123", "D003", "driver", 3);
+        createUser("driver4@passakay.com", "password123", "D004", "driver", 4);
         
         // Passenger
         createUser("passenger@passakay.com", "password123", "21101234", "passenger", -1);

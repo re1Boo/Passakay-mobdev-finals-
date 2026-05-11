@@ -98,6 +98,12 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         driverLng = getIntent().getDoubleExtra(EXTRA_DRIVER_LNG, 123.9115);
         shuttleId = getIntent().getStringExtra("shuttleId");
 
+        // Mark shuttle as active immediately when driver starts
+        if (shuttleId != null) {
+            db.child("shuttles").child(shuttleId).child("active").setValue(true);
+            db.child("shuttles").child(shuttleId).child("status").setValue("Deployed");
+        }
+
         cardNotification = findViewById(R.id.cardNotification);
         tvNotificationText = findViewById(R.id.tvNotificationText);
 
@@ -340,6 +346,8 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         shuttleRef.child("status").setValue("Standby");
         shuttleRef.child("driverId").setValue("");
         shuttleRef.child("driverName").setValue("No driver");
+        shuttleRef.child("active").setValue(false); // Mark shuttle as offline
+
         startActivity(new Intent(this, DriverDashboardActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
         finish();
     }

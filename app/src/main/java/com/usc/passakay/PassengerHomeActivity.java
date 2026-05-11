@@ -368,7 +368,8 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 shuttleList.clear();
                 for (DataSnapshot child : snapshot.getChildren()) {
                     Shuttle s = child.getValue(Shuttle.class);
-                    if (s != null && s.getCurrentLat() != 0) {
+                    if (s != null) {
+                        // Load ALL shuttles so they can be shown in the list (active or grayed out)
                         shuttleList.add(new ShuttleItem(String.valueOf(s.getShuttleId()), "Bus " + s.getShuttleId(), 
                             s.getDriverName(), s.getPlateNumber(), 5, s.isActive(), s.getCurrentLat(), s.getCurrentLng()));
                     }
@@ -484,7 +485,8 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         }
 
         for (ShuttleItem s : shuttleList) {
-            if (s.isAvailable()) {
+            // ONLY show marker if shuttle is ACTIVE and has a valid location
+            if (s.isAvailable() && s.getDriverLat() != 0) {
                 LatLng pos = new LatLng(s.getDriverLat(), s.getDriverLng());
                 Marker existing = shuttleMarkers.get(s.getShuttleId());
                 if (existing != null) {

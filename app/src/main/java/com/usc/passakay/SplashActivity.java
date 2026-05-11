@@ -31,6 +31,9 @@ public class SplashActivity extends BaseActivity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
+        // Seed data for testing (Drivers, Stops, etc.)
+        new DataSeeder().seedAll();
+
         View dot1 = findViewById(R.id.dot1);
         View dot2 = findViewById(R.id.dot2);
         View dot3 = findViewById(R.id.dot3);
@@ -40,9 +43,6 @@ public class SplashActivity extends BaseActivity {
         new Handler(Looper.getMainLooper()).postDelayed(this::checkHardwareBindingFirst, 3000);
     }
 
-    /**
-     * Priority 1: Verify user role and check hardware binding ONLY for drivers.
-     */
     private void checkHardwareBindingFirst() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
@@ -53,7 +53,6 @@ public class SplashActivity extends BaseActivity {
         final String myAppId = getAppInstanceId();
         final String uid = currentUser.getUid();
 
-        // Get user role first.
         db.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot userSnapshot) {
@@ -76,7 +75,6 @@ public class SplashActivity extends BaseActivity {
                     return;
                 }
 
-                // If driver, check for hardware binding
                 if ("driver".equals(user.getRole())) {
                     db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
