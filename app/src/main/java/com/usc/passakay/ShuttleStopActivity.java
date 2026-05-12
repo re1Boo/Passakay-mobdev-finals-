@@ -149,7 +149,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     }
 
     private void pickUpPassengers(StopItem stopItem) {
-        if (stopItem.getDistanceMeters() > 100) {
+        if (stopItem.getDistanceMeters() > 200) {
             Toast.makeText(this, "You must be closer to the stop to pick up passengers", Toast.LENGTH_SHORT).show();
             return;
         }
