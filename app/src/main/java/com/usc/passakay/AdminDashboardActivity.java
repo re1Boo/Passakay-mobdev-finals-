@@ -2,12 +2,13 @@ package com.usc.passakay;
 
 import android.os.Bundle;
 import android.widget.Button;
-
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import com.google.android.material.tabs.TabLayout;
-    import androidx.viewpager2.widget.ViewPager2;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
+import androidx.viewpager2.widget.ViewPager2;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 
 public class AdminDashboardActivity extends BaseActivity {
 
@@ -19,8 +20,8 @@ public class AdminDashboardActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_dashboard);
 
-        tabLayout  = findViewById(R.id.tabLayout);
-        viewPager  = findViewById(R.id.viewPager);
+        tabLayout = findViewById(R.id.tabLayout);
+        viewPager = findViewById(R.id.viewPager);
 
         // Set up logout button
         Button btnLogout = findViewById(R.id.btnLogout);
@@ -32,36 +33,27 @@ public class AdminDashboardActivity extends BaseActivity {
         AdminPagerAdapter adapter = new AdminPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
-        // Add Tabs programmatically to ensure they exist
-        tabLayout.addTab(tabLayout.newTab().setText("Users"));
-        tabLayout.addTab(tabLayout.newTab().setText("Drivers"));
-        tabLayout.addTab(tabLayout.newTab().setText("Bookings"));
-        tabLayout.addTab(tabLayout.newTab().setText("Announce"));
-
-        // Link TabLayout with ViewPager
-        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                viewPager.setCurrentItem(tab.getPosition());
+        // Sync TabLayout with ViewPager2
+        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
+            switch (position) {
+                case 0: tab.setText("Users"); break;
+                case 1: tab.setText("Drivers"); break;
+                case 2: tab.setText("Bookings"); break;
+                case 3: tab.setText("Announce"); break;
+                case 4: tab.setText("Add Driver"); break;
             }
-            @Override public void onTabUnselected(TabLayout.Tab tab) {}
-            @Override public void onTabReselected(TabLayout.Tab tab) {}
-        });
-
-        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override
-            public void onPageSelected(int position) {
-                if (tabLayout.getTabAt(position) != null) {
-                    tabLayout.selectTab(tabLayout.getTabAt(position));
-                }
-            }
-        });
+        }).attach();
+        
+        // Ensure tabs are scrollable to fit all 5 items
+        tabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
     }
 
-    // Adapter for tabs
-    static class AdminPagerAdapter extends FragmentStateAdapter {
-        public AdminPagerAdapter(FragmentActivity fa) { super(fa); }
+    private static class AdminPagerAdapter extends FragmentStateAdapter {
+        public AdminPagerAdapter(@NonNull FragmentActivity fa) {
+            super(fa);
+        }
 
+        @NonNull
         @Override
         public Fragment createFragment(int position) {
             switch (position) {
@@ -69,11 +61,14 @@ public class AdminDashboardActivity extends BaseActivity {
                 case 1: return new AdminDriversFragment();
                 case 2: return new AdminBookingFragment();
                 case 3: return new AdminAnnouncementsFragment();
+                case 4: return new AdminCreateDriverFragment();
                 default: return new AdminUsersFragment();
             }
         }
 
         @Override
-        public int getItemCount() { return 4; }
+        public int getItemCount() {
+            return 5;
+        }
     }
 }
