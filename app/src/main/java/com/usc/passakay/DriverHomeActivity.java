@@ -24,7 +24,6 @@ import java.util.List;
 /**
  * DRIVER HOME ACTIVITY
  * This activity handles the driver's ability to select a shuttle and end a trip.
- * The selection is now handled via RecyclerView cards.
  */
 public class DriverHomeActivity extends BaseActivity {
 
@@ -39,21 +38,23 @@ public class DriverHomeActivity extends BaseActivity {
     private List<ShuttleItem> shuttleList = new ArrayList<>();
     private String selectedShuttleId = null;
 
+    private AIScheduler aiScheduler;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_driver_home);
 
+        // Start AI when driver is active
+        aiScheduler = new AIScheduler(this);
+        aiScheduler.start();
+
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
         currentUserId = FirebaseAuth.getInstance().getUid();
 
-        // Initialize UI
         recyclerShuttles = findViewById(R.id.recyclerShuttles);
         recyclerShuttles.setLayoutManager(new LinearLayoutManager(this));
-        
-        // Fixed: Pass getSupportFragmentManager() as the third argument
         shuttleAdapter = new ShuttleAdapter(this, shuttleList, getSupportFragmentManager());
-
         recyclerShuttles.setAdapter(shuttleAdapter);
 
         btnEndTrip = findViewById(R.id.btnEndTrip);
@@ -61,15 +62,9 @@ public class DriverHomeActivity extends BaseActivity {
         layoutActiveTrip = findViewById(R.id.layoutActiveTrip);
         tvActiveBus = findViewById(R.id.tvActiveBus);
 
-        // 1. Initialize starter shuttles in DB if they don't exist
         initializeStarterShuttles();
-
-        // 2. Load shuttles for the list
         loadShuttles();
-
-        // 3. Handle End Trip
         btnEndTrip.setOnClickListener(v -> endTrip());
-        
         checkIfAlreadyDriving();
     }
 
@@ -83,7 +78,6 @@ public class DriverHomeActivity extends BaseActivity {
                     db.child("shuttles").child("3").setValue(new Shuttle(3, "GWX-103"));
                 }
             }
-
             @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
@@ -99,7 +93,7 @@ public class DriverHomeActivity extends BaseActivity {
                         boolean isStandby = "Standby".equals(s.getStatus());
                         boolean isAvailable = !"Unavailable".equals(s.getStatus());
 
-                        ShuttleItem item = new ShuttleItem(
+                        shuttleList.add(new ShuttleItem(
                                 String.valueOf(s.getShuttleId()),
                                 "Bus " + s.getShuttleId(),
                                 s.getDriverName(),
@@ -107,9 +101,9 @@ public class DriverHomeActivity extends BaseActivity {
                                 0,
                                 isAvailable,
                                 isStandby,
-                                10.3541, 123.9115
-                        );
-                        shuttleList.add(item);
+                                s.getCurrentLat() != 0 ? s.getCurrentLat() : 10.3541,
+                                s.getCurrentLng() != 0 ? s.getCurrentLng() : 123.9115
+                        ));
                     }
                 }
                 shuttleAdapter.notifyDataSetChanged();
@@ -135,9 +129,7 @@ public class DriverHomeActivity extends BaseActivity {
                         }
                         showSelectionUI();
                     }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {}
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
                 });
     }
 
@@ -150,6 +142,7 @@ public class DriverHomeActivity extends BaseActivity {
         shuttleRef.child("status").setValue("Standby");
         shuttleRef.child("driverName").setValue("No driver");
         shuttleRef.child("driverId").setValue("");
+        shuttleRef.child("currentPassengers").setValue(0); // ✅ Reset passenger count
 
         showSelectionUI();
         selectedShuttleId = null;
@@ -165,5 +158,11 @@ public class DriverHomeActivity extends BaseActivity {
     private void showSelectionUI() {
         layoutSelection.setVisibility(View.VISIBLE);
         layoutActiveTrip.setVisibility(View.GONE);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (aiScheduler != null) aiScheduler.stop();
     }
 }

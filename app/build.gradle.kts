@@ -15,6 +15,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // ✅ Read API key from local.properties
+        val geminiApiKey: String = project.findProperty("GEMINI_API_KEY") as String? ?: ""
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -34,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.okhttp)
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)

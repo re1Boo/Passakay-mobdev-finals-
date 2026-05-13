@@ -17,6 +17,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
 import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.common.InputImage;
@@ -31,7 +33,6 @@ public class ScannerActivity extends AppCompatActivity {
     private static final int PERMISSION_CODE_CAMERA = 1;
     private PreviewView previewView;
     private ExecutorService cameraExecutor;
-    private RealtimeDBHelper dbHelper;
     private boolean isScanning = false;
 
     @Override
@@ -46,7 +47,6 @@ public class ScannerActivity extends AppCompatActivity {
             btnClose.setOnClickListener(v -> finish());
         }
 
-        dbHelper = new RealtimeDBHelper();
         cameraExecutor = Executors.newSingleThreadExecutor();
 
         if (allPermissionsGranted()) {
@@ -106,7 +106,7 @@ public class ScannerActivity extends AppCompatActivity {
                                         isScanning = true;
                                         String qrContent = barcodes.get(0).getRawValue();
                                         Log.d(TAG, "Barcode detected: " + qrContent);
-                                        sendSignalToFirebase(qrContent);
+                                        onQRScanned(qrContent);
                                     }
                                 })
                                 .addOnFailureListener(e -> Log.e(TAG, "Barcode scanning failed", e))
@@ -127,31 +127,48 @@ public class ScannerActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
-    private void sendSignalToFirebase(String qrContent) {
-        String uid = FirebaseAuth.getInstance().getUid();
-        Log.d(TAG, "Attempting to send signal. UID: " + uid + ", Content: " + qrContent);
-        
-        if (uid == null) {
-            runOnUiThread(() -> {
-                Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
-                isScanning = false;
-            });
+    private void onQRScanned(String qrContent) {
+        if (qrContent == null) {
+            isScanning = false;
             return;
         }
 
-        dbHelper.logScanEvent(uid, qrContent, () -> {
-            Log.d(TAG, "Database log successful");
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Signal sent: " + qrContent, Toast.LENGTH_LONG).show();
-                finish();
-            });
-        }, error -> {
-            Log.e(TAG, "Database log failed: " + error);
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Failed to send signal: " + error, Toast.LENGTH_SHORT).show();
-                isScanning = false;
-            });
-        });
+        String stopName = qrContent.replace(".com", "").trim();
+        QueueManager queueManager = new QueueManager();
+
+        runOnUiThread(() -> Toast.makeText(this, "Finding your shuttle...", Toast.LENGTH_SHORT).show());
+
+        // ✅ Use direct allocation logic to avoid being stuck
+        queueManager.joinQueueAndAllocate(stopName,
+            result -> {
+                // Manually trigger the AI dispatch to optimize background state
+                AIShuttleManager aiManager = new AIShuttleManager(this);
+                aiManager.runAIManagement();
+
+                runOnUiThread(() -> {
+                    Toast.makeText(this,
+                        "✅ Shuttle Assigned!\n" +
+                        "Bus " + result.getShuttleId() +
+                        " • " + result.getPlateNumber() +
+                        "\nQueue #" + result.getQueuePosition() +
+                        "\nETA: ~" + result.getEtaMinutes() + " mins",
+                        Toast.LENGTH_LONG).show();
+                    finish();
+                });
+            },
+            error -> runOnUiThread(() -> {
+                if ("No available shuttles right now".equals(error)) {
+                    Toast.makeText(this,
+                        "You joined the queue at " + stopName +
+                        "\nWaiting for a shuttle to become available...",
+                        Toast.LENGTH_LONG).show();
+                    finish();
+                } else {
+                    Toast.makeText(this, "Error: " + error, Toast.LENGTH_SHORT).show();
+                    isScanning = false;
+                }
+            })
+        );
     }
 
     @Override

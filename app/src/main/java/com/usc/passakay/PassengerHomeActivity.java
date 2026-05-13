@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -66,15 +67,17 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private DatabaseReference db;
     
     private MaterialButton btnWaitingStatus, btnCancelRide;
-    private TextView tvUserLoc, tvNextStop;
+    private TextView tvUserLoc, tvNextStop, tvNearestStopDistance;
     private LinearLayout layoutTripProgress;
     private ProgressBar progressBarTrip;
+    private CardView cardStatus;
     
     private boolean isWaiting = false;
     private boolean isRiding = false;
     private String waitingAtStopName = "";
     private int ridingShuttleId = -1;
     private long outOfRadiusStartTime = 0;
+    private User currentUserObj;
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -95,10 +98,12 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        cardStatus = findViewById(R.id.cardStatus);
         btnWaitingStatus = findViewById(R.id.btnWaitingStatus);
         btnCancelRide = findViewById(R.id.btnCancelRide);
         tvUserLoc = findViewById(R.id.tvUserLoc);
         tvNextStop = findViewById(R.id.tvNextStop);
+        tvNearestStopDistance = findViewById(R.id.tvNearestStopDistance);
         layoutTripProgress = findViewById(R.id.layoutTripProgress);
         progressBarTrip = findViewById(R.id.progressBarTrip);
 
@@ -121,6 +126,24 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         startLocationUpdates();
         syncUserStatus();
         startStatusMonitor();
+        listenForAIUpdates();
+    }
+
+    private void listenForAIUpdates() {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+
+        db.child("users").child(uid).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user != null) {
+                    // AI recommendation tips could go here
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError error) {}
+        });
     }
 
     private void syncUserStatus() {
@@ -130,12 +153,12 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         db.child("users").child(uid).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                User user = snapshot.getValue(User.class);
-                if (user != null) {
-                    isWaiting = user.isWaiting;
-                    isRiding = user.isRiding;
-                    waitingAtStopName = user.waitingAt != null ? user.waitingAt : "";
-                    ridingShuttleId = user.ridingShuttleId;
+                currentUserObj = snapshot.getValue(User.class);
+                if (currentUserObj != null) {
+                    isWaiting = currentUserObj.isWaiting;
+                    isRiding = currentUserObj.isRiding;
+                    waitingAtStopName = currentUserObj.waitingAt != null ? currentUserObj.waitingAt : "";
+                    ridingShuttleId = currentUserObj.ridingShuttleId;
                     updateStatusUI();
                 }
             }
@@ -144,26 +167,59 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     }
 
     private void updateStatusUI() {
+        if (currentUserObj == null) return;
+
         if (isRiding) {
-            btnWaitingStatus.setText("RIDING...");
+            cardStatus.setCardBackgroundColor(Color.parseColor("#14D337")); // Green
+            btnWaitingStatus.setText("ON RIDE");
             btnWaitingStatus.setBackgroundTintList(ColorStateList.valueOf(0xFF4CAF50)); 
             layoutTripProgress.setVisibility(View.VISIBLE);
             btnCancelRide.setVisibility(View.VISIBLE);
             btnCancelRide.setText("CANCEL RIDE");
+            
+            if (ridingShuttleId != -1) {
+                tvUserLoc.setText("Riding Shuttle " + ridingShuttleId);
+            }
         } else if (isWaiting) {
-            btnWaitingStatus.setText("WAITING");
-            btnWaitingStatus.setBackgroundTintList(ColorStateList.valueOf(0xFFF44336)); 
-            layoutTripProgress.setVisibility(View.GONE);
-            btnCancelRide.setVisibility(View.VISIBLE);
-            btnCancelRide.setText("CANCEL WAITING");
-            if (!waitingAtStopName.isEmpty()) {
+            if ("assigned".equals(currentUserObj.allocationStatus) && currentUserObj.assignedShuttleId > 0) {
+                // SHOW ASSIGNED DETAILS
+                cardStatus.setCardBackgroundColor(Color.parseColor("#2196F3")); // Blue
+                btnWaitingStatus.setText("ASSIGNED");
+                btnWaitingStatus.setBackgroundTintList(ColorStateList.valueOf(0xFF1976D2));
+                
+                String busInfo = "Bus " + currentUserObj.assignedShuttleId;
+                if (currentUserObj.assignedPlate != null && !currentUserObj.assignedPlate.isEmpty()) {
+                    busInfo += " • " + currentUserObj.assignedPlate;
+                }
+                tvUserLoc.setText(busInfo);
+                
+                if (tvNearestStopDistance != null) {
+                    tvNearestStopDistance.setText("Arriving in ~" + currentUserObj.estimatedWaitMinutes + " mins • Queue #" + currentUserObj.queuePosition);
+                }
+                
+                layoutTripProgress.setVisibility(View.GONE);
+                btnCancelRide.setVisibility(View.VISIBLE);
+                btnCancelRide.setText("CANCEL WAITING");
+            } else {
+                // REGULAR WAITING
+                cardStatus.setCardBackgroundColor(Color.parseColor("#FF5252")); // Red
+                btnWaitingStatus.setText("WAITING");
+                btnWaitingStatus.setBackgroundTintList(ColorStateList.valueOf(0xFFD32F2F));
+                
                 tvUserLoc.setText("Waiting at: " + waitingAtStopName);
+                if (tvNearestStopDistance != null) tvNearestStopDistance.setText("In Queue... Waiting for AI Dispatch");
+                
+                layoutTripProgress.setVisibility(View.GONE);
+                btnCancelRide.setVisibility(View.VISIBLE);
+                btnCancelRide.setText("CANCEL WAITING");
             }
         } else {
+            cardStatus.setCardBackgroundColor(Color.parseColor("#14D337")); // Green
             btnWaitingStatus.setText("NOT WAITING");
             btnWaitingStatus.setBackgroundTintList(ColorStateList.valueOf(0xFFFFEA08)); 
             layoutTripProgress.setVisibility(View.GONE);
             btnCancelRide.setVisibility(View.GONE);
+            if (tvNearestStopDistance != null) tvNearestStopDistance.setText("");
             updateNearestStopLabel();
         }
     }
@@ -185,6 +241,10 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
         if (nearest != null) {
             tvUserLoc.setText("Nearest Stop: " + nearest.getStopName());
+            String uid = FirebaseAuth.getInstance().getUid();
+            if (uid != null) {
+                db.child("users").child(uid).child("nearestStop").setValue(nearest.getStopName());
+            }
         }
     }
 
@@ -286,8 +346,8 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         if (isWaiting && !waitingAtStopName.isEmpty()) {
             String stopKey = getScanKey(waitingAtStopName);
             db.child("scans").child(stopKey).child(uid).removeValue();
-            
-            // Decrement the waiting count for this stop atomically
+            new QueueManager().leaveQueue(waitingAtStopName);
+
             db.child("stopWaitingCounts").child(stopKey).runTransaction(new com.google.firebase.database.Transaction.Handler() {
                 @NonNull
                 @Override
@@ -302,11 +362,19 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         }
 
         DatabaseReference ref = db.child("users").child(uid);
-        ref.child("isWaiting").setValue(false);
-        ref.child("isRiding").setValue(false);
-        ref.child("waitingAt").setValue("");
-        ref.child("ridingShuttleId").setValue(-1);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isWaiting", false);
+        updates.put("isRiding", false);
+        updates.put("waitingAt", "");
+        updates.put("ridingShuttleId", -1);
+        updates.put("assignedShuttleId", -1);
+        updates.put("assignedPlate", "");
+        updates.put("assignedStop", "");
+        updates.put("queuePosition", 0);
+        updates.put("allocationStatus", "");
+        updates.put("estimatedWaitMinutes", 0);
         
+        ref.updateChildren(updates);
         Toast.makeText(this, "Status cleared", Toast.LENGTH_SHORT).show();
     }
 
@@ -381,9 +449,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 for (DataSnapshot child : snapshot.getChildren()) {
                     Shuttle s = child.getValue(Shuttle.class);
                     if (s != null) {
-                        // A shuttle is "Available" (Online) only if it is active AND has an assigned driver
                         boolean isOnline = s.isActive() && s.getDriverId() != null && !s.getDriverId().isEmpty();
-                        
                         shuttleList.add(new ShuttleItem(String.valueOf(s.getShuttleId()), "Bus " + s.getShuttleId(), 
                             s.getDriverName(), s.getPlateNumber(), 5, isOnline, s.getCurrentLat(), s.getCurrentLng()));
                     }
@@ -401,10 +467,8 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             googleMap.setMyLocationEnabled(true);
         }
-        
         LatLng campus = new LatLng(USC_LAT, USC_LNG);
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(campus, 16.5f));
-        
         loadStopsOnMap();
     }
 
@@ -450,7 +514,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
     private void zoomToFitAll() {
         if (googleMap == null || allStops.isEmpty()) return;
-        
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         int validPoints = 0;
         for (ShuttleStop stop : allStops) {
@@ -459,12 +522,10 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 validPoints++;
             }
         }
-        
         if (validPoints == 0) {
              googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(USC_LAT, USC_LNG), 16.5f));
              return;
         }
-
         LatLngBounds bounds = builder.build();
         try {
             googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100)); 
@@ -475,7 +536,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
     private void updateMapMarkers() {
         if (googleMap == null) return;
-        
         for (ShuttleStop stop : allStops) {
             int count = stopWaitingCounts.getOrDefault(stop.getStopName(), 0);
             Bitmap icon = createMarkerBitmap(stop.getStopName(), count);
@@ -489,7 +549,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 stopMarkers.put(stop.getStopName(), m);
             }
         }
-
         if (userLat != 0) {
             LatLng userPos = new LatLng(userLat, userLng);
             if (userMarker == null) {
@@ -499,9 +558,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 userMarker.setPosition(userPos);
             }
         }
-
         for (ShuttleItem s : shuttleList) {
-            // ONLY show marker if shuttle is ACTIVE and has a valid location
             if (s.isAvailable() && s.getDriverLat() != 0) {
                 LatLng pos = new LatLng(s.getDriverLat(), s.getDriverLng());
                 Marker existing = shuttleMarkers.get(s.getShuttleId());
@@ -524,26 +581,19 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         TextView tvName = markerView.findViewById(R.id.tvMarkerName);
         TextView tvCount = markerView.findViewById(R.id.tvMarkerWaiting);
         View viewDot = markerView.findViewById(R.id.viewDot);
-
         if (tvName != null) tvName.setText(name);
         if (tvCount != null) {
             tvCount.setText(String.valueOf(count));
-            
             int greenColor = Color.parseColor("#4CAF50");
             int greyColor  = Color.parseColor("#9E9E9E");
             int colorToApply = (count > 0) ? greenColor : greyColor;
-            
             tvCount.setTextColor(colorToApply);
             if (viewDot != null) {
                 Drawable background = viewDot.getBackground();
-                if (background != null) {
-                    background.mutate().setTint(colorToApply);
-                } else {
-                    viewDot.setBackgroundColor(colorToApply);
-                }
+                if (background != null) background.mutate().setTint(colorToApply);
+                else viewDot.setBackgroundColor(colorToApply);
             }
         }
-
         return getBitmapFromView(markerView);
     }
 
@@ -565,7 +615,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         });
     }
 
-    @Override protected void onResume() { super.onResume(); if (mapView != null) mapView.onResume(); }
-    @Override protected void onPause() { super.onPause(); if (mapView != null) { mapView.onPause(); if (fusedLocationClient != null) fusedLocationClient.removeLocationUpdates(locationCallback); } }
-    @Override protected void onDestroy() { super.onDestroy(); statusMonitorHandler.removeCallbacksAndMessages(null); if (mapView != null) mapView.onDestroy(); }
+    @Override public void onResume() { super.onResume(); if (mapView != null) mapView.onResume(); }
+    @Override public void onPause() { super.onPause(); if (mapView != null) { mapView.onPause(); if (fusedLocationClient != null) fusedLocationClient.removeLocationUpdates(locationCallback); } }
+    @Override public void onDestroy() { super.onDestroy(); statusMonitorHandler.removeCallbacksAndMessages(null); if (mapView != null) mapView.onDestroy(); }
 }

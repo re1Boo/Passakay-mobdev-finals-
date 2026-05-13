@@ -19,6 +19,7 @@ circleimageview = "3.1.0"
 zxing = "4.3.0"
 glide = "4.16.0"
 playServicesLocation = "21.3.0"
+okhttp = "4.12.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -40,6 +41,7 @@ zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embe
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -3,8 +3,13 @@ package com.usc.passakay;
 import android.util.Log;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthUserCollisionException;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import androidx.annotation.NonNull;
 
 public class DataSeeder {
 
@@ -22,7 +27,7 @@ public class DataSeeder {
         seedCourses();
         seedShuttles();
         seedShuttleStops();
-        seedUsers();
+        // seedUsers(); // REMOVED: To prevent hijacking existing sessions in SplashActivity
     }
 
     private void seedDepartments() {
@@ -35,9 +40,7 @@ public class DataSeeder {
                 new Department(6, "School of Law and Governance")
         };
         for (Department dept : departments) {
-            db.child("departments").child(String.valueOf(dept.getDepartmentId())).setValue(dept)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Department seeded: " + dept.getDepartmentName()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Department seed failed: " + e.getMessage()));
+            db.child("departments").child(String.valueOf(dept.getDepartmentId())).setValue(dept);
         }
     }
 
@@ -88,9 +91,7 @@ public class DataSeeder {
                 new Course(44, "AB Theology")
         };
         for (Course course : courses) {
-            db.child("courses").child(String.valueOf(course.getCourseId())).setValue(course)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Course seeded: " + course.getCourseName()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Course seed failed: " + e.getMessage()));
+            db.child("courses").child(String.valueOf(course.getCourseId())).setValue(course);
         }
     }
 
@@ -104,10 +105,17 @@ public class DataSeeder {
         };
         for (Shuttle shuttle : shuttles) {
             shuttle.setCapacity(30);
-            shuttle.setDeviceId("");
-            db.child("shuttles").child(String.valueOf(shuttle.getShuttleId())).setValue(shuttle)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Shuttle seeded: " + shuttle.getPlateNumber()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Shuttle seed failed: " + e.getMessage()));
+            String shuttleIdStr = String.valueOf(shuttle.getShuttleId());
+            db.child("shuttles").child(shuttleIdStr).addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    if (!snapshot.exists()) {
+                        shuttle.setDeviceId("");
+                        db.child("shuttles").child(shuttleIdStr).setValue(shuttle);
+                    }
+                }
+                @Override public void onCancelled(@NonNull DatabaseError error) {}
+            });
         }
     }
 
@@ -125,22 +133,24 @@ public class DataSeeder {
                 new ShuttleStop(11, "AMONG BALAY",          10.352712231386858, 123.91142525690631),
         };
         for (ShuttleStop stop : stops) {
-            db.child("shuttleStops").child(String.valueOf(stop.getStopId())).setValue(stop)
-                    .addOnSuccessListener(a -> Log.d(TAG, "Stop seeded: " + stop.getStopName()))
-                    .addOnFailureListener(e -> Log.e(TAG, "Stop seed failed: " + e.getMessage()));
+            db.child("shuttleStops").child(String.valueOf(stop.getStopId())).setValue(stop);
         }
     }
 
-    private void seedUsers() {
+    public void seedUsers() {
+        // Fix: Skip seeding if someone is already logged in to prevent session hijacking
+        if (mAuth.getCurrentUser() != null) {
+            Log.d(TAG, "User already logged in, skipping user seeding.");
+            return;
+        }
+
         // Admin
         createUser("admin@passakay.com", "admin123456", "00000001", "admin", -1);
         
-        // Drivers - Assigned to Shuttle 1 and 2
+        // Drivers
         createUser("driver@passakay.com", "password123", "20000001", "driver", 1);
         createUser("driver1@passakay.com", "password123", "D001", "driver", 1);
         createUser("driver2@passakay.com", "password123", "D002", "driver", 2);
-        createUser("driver3@passakay.com", "password123", "D003", "driver", 3);
-        createUser("driver4@passakay.com", "password123", "D004", "driver", 4);
         
         // Passenger
         createUser("passenger@passakay.com", "password123", "21101234", "passenger", -1);
@@ -153,12 +163,8 @@ public class DataSeeder {
                 })
                 .addOnFailureListener(e -> {
                     if (e instanceof FirebaseAuthUserCollisionException) {
-                        Log.d(TAG, "User already exists in Auth: " + email + ". Updating database data...");
-                        mAuth.signInWithEmailAndPassword(email, password)
-                                .addOnSuccessListener(authResult -> {
-                                    saveUserData(authResult.getUser().getUid(), email, studentId, role, assignedShuttleId);
-                                })
-                                .addOnFailureListener(err -> Log.e(TAG, "Sign in failed for " + email + ": " + err.getMessage()));
+                        // Fix: Do NOT call signInWithEmailAndPassword here as it hijacks the current session
+                        Log.d(TAG, "User already exists in Auth: " + email);
                     } else {
                         Log.e(TAG, "Failed to create user " + email + ": " + e.getMessage());
                     }
@@ -177,8 +183,6 @@ public class DataSeeder {
         user.setDepartmentId(1);
         user.setCourseId(1);
 
-        db.child("users").child(uid).setValue(user)
-                .addOnSuccessListener(a -> Log.d(TAG, "User seeded: " + email))
-                .addOnFailureListener(e -> Log.e(TAG, "Seed failed: " + e.getMessage()));
+        db.child("users").child(uid).setValue(user);
     }
 }

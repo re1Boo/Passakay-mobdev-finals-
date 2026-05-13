@@ -23,6 +23,17 @@ public class User {
     public double currentLng;
     public String waitingAt;
     public long waitingStartTime;
+    
+    // AI Related Fields
+    public String nearestStop;
+    public String recommendedStop;
+    public int estimatedWaitMinutes;
+
+    // Queue Related Fields
+    public String assignedPlate;
+    public String assignedStop;
+    public int queuePosition;
+    public String allocationStatus;
 
     public User() {}
 
@@ -84,4 +95,20 @@ public class User {
     public void setWaitingAt(String waitingAt) { this.waitingAt = waitingAt; }
     public long getWaitingStartTime() { return waitingStartTime; }
     public void setWaitingStartTime(long waitingStartTime) { this.waitingStartTime = waitingStartTime; }
+
+    public String getNearestStop() { return nearestStop; }
+    public void setNearestStop(String nearestStop) { this.nearestStop = nearestStop; }
+    public String getRecommendedStop() { return recommendedStop; }
+    public void setRecommendedStop(String recommendedStop) { this.recommendedStop = recommendedStop; }
+    public int getEstimatedWaitMinutes() { return estimatedWaitMinutes; }
+    public void setEstimatedWaitMinutes(int estimatedWaitMinutes) { this.estimatedWaitMinutes = estimatedWaitMinutes; }
+
+    public String getAssignedPlate() { return assignedPlate; }
+    public void setAssignedPlate(String assignedPlate) { this.assignedPlate = assignedPlate; }
+    public String getAssignedStop() { return assignedStop; }
+    public void setAssignedStop(String assignedStop) { this.assignedStop = assignedStop; }
+    public int getQueuePosition() { return queuePosition; }
+    public void setQueuePosition(int queuePosition) { this.queuePosition = queuePosition; }
+    public String getAllocationStatus() { return allocationStatus; }
+    public void setAllocationStatus(String allocationStatus) { this.allocationStatus = allocationStatus; }
 }
