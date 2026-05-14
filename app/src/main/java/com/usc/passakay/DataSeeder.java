@@ -27,7 +27,7 @@ public class DataSeeder {
         seedCourses();
         seedShuttles();
         seedShuttleStops();
-        seedUsers(); 
+        seedUsers();
     }
 
     private void seedDepartments() {
@@ -148,7 +148,7 @@ public class DataSeeder {
         createUser("driver1@passakay.com", "password123", "D001", "driver", 1);
         createUser("driver2@passakay.com", "password123", "D002", "driver", 2);
         createUser("passenger@passakay.com", "password123", "21101234", "passenger", -1);
-        
+
         // Added requested passenger account
         createUser("user24100679@passakay.com", "50c14813", "24100679", "passenger", -1);
     }

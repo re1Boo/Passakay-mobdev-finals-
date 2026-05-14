@@ -26,7 +26,7 @@ public class QueueManager {
 
     private static final String TAG = "QueueManager";
     private static final String DB_URL =
-        "https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/";
+            "https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/";
     private static final int SHUTTLE_CAPACITY = 16;
 
     private final DatabaseReference db;
@@ -49,51 +49,51 @@ public class QueueManager {
 
         // Check if already in queue
         db.child("queue").child(queueKey).child(uid)
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        Log.d(TAG, "Already in queue at " + stopName);
-                        onSuccess.run();
-                        return;
-                    }
-
-                    // Mark user as waiting immediately
-                    Map<String, Object> userUpdates = new HashMap<>();
-                    userUpdates.put("isWaiting", true);
-                    userUpdates.put("waitingAt", stopName);
-                    userUpdates.put("waitingStartTime", ServerValue.TIMESTAMP);
-                    db.child("users").child(uid).updateChildren(userUpdates);
-
-                    // Add to queue with server timestamp
-                    Map<String, Object> entry = new HashMap<>();
-                    entry.put("uid",               uid);
-                    entry.put("stopName",           stopName);
-                    entry.put("timestamp",          ServerValue.TIMESTAMP);
-                    entry.put("assignedShuttleId",  -1);
-                    entry.put("assignedPlate",      "");
-                    entry.put("status",             "waiting");
-
-                    db.child("queue").child(queueKey).child(uid)
-                        .setValue(entry)
-                        .addOnSuccessListener(a -> {
-                            Log.d(TAG, "Joined queue at " + stopName);
-                            updateLegacyScanNodes(uid, stopName);
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            Log.d(TAG, "Already in queue at " + stopName);
                             onSuccess.run();
-                        })
-                        .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
-                }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    onFailure.accept(error.getMessage());
-                }
-            });
+                            return;
+                        }
+
+                        // Mark user as waiting immediately
+                        Map<String, Object> userUpdates = new HashMap<>();
+                        userUpdates.put("isWaiting", true);
+                        userUpdates.put("waitingAt", stopName);
+                        userUpdates.put("waitingStartTime", ServerValue.TIMESTAMP);
+                        db.child("users").child(uid).updateChildren(userUpdates);
+
+                        // Add to queue with server timestamp
+                        Map<String, Object> entry = new HashMap<>();
+                        entry.put("uid",               uid);
+                        entry.put("stopName",           stopName);
+                        entry.put("timestamp",          ServerValue.TIMESTAMP);
+                        entry.put("assignedShuttleId",  -1);
+                        entry.put("assignedPlate",      "");
+                        entry.put("status",             "waiting");
+
+                        db.child("queue").child(queueKey).child(uid)
+                                .setValue(entry)
+                                .addOnSuccessListener(a -> {
+                                    Log.d(TAG, "Joined queue at " + stopName);
+                                    updateLegacyScanNodes(uid, stopName);
+                                    onSuccess.run();
+                                })
+                                .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        onFailure.accept(error.getMessage());
+                    }
+                });
     }
 
     // ✅ Fix 2: Add fallback direct allocation
     public void joinQueueAndAllocate(String stopName,
-                                  Consumer<AssignmentResult> onAssigned,
-                                  Consumer<String> onFailure) {
+                                     Consumer<AssignmentResult> onAssigned,
+                                     Consumer<String> onFailure) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) {
             onFailure.accept("Not logged in");
@@ -118,23 +118,23 @@ public class QueueManager {
         entry.put("status",           "waiting");
 
         db.child("queue").child(queueKey).child(uid)
-            .setValue(entry)
-            .addOnSuccessListener(a -> {
-                Log.d(TAG, "Joined queue at " + stopName);
-                updateLegacyScanNodes(uid, stopName);
-                // Find nearest active shuttle and allocate directly
-                findAndAllocateShuttle(uid, stopName, onAssigned, onFailure);
-            })
-            .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
+                .setValue(entry)
+                .addOnSuccessListener(a -> {
+                    Log.d(TAG, "Joined queue at " + stopName);
+                    updateLegacyScanNodes(uid, stopName);
+                    // Find nearest active shuttle and allocate directly
+                    findAndAllocateShuttle(uid, stopName, onAssigned, onFailure);
+                })
+                .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
     }
 
     private void updateLegacyScanNodes(String uid, String stopName) {
         String scanKey = getScanKey(stopName);
         Log.d(TAG, "Updating legacy scan nodes for: " + scanKey);
-        
+
         // Update 'scans' node
         db.child("scans").child(scanKey).child(uid).setValue(true);
-        
+
         // Update 'stopWaitingCounts' node
         db.child("stopWaitingCounts").child(scanKey).runTransaction(new Transaction.Handler() {
             @NonNull
@@ -177,8 +177,8 @@ public class QueueManager {
     }
 
     private void findAndAllocateShuttle(String uid, String stopName,
-                                         Consumer<AssignmentResult> onAssigned,
-                                         Consumer<String> onFailure) {
+                                        Consumer<AssignmentResult> onAssigned,
+                                        Consumer<String> onFailure) {
         db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -190,7 +190,7 @@ public class QueueManager {
                     if (s != null && s.isActive()) {
                         int passengers = s.getCurrentPassengers();
                         if (passengers < SHUTTLE_CAPACITY &&
-                            passengers < lowestPassengers) {
+                                passengers < lowestPassengers) {
                             lowestPassengers = passengers;
                             bestShuttle = s;
                         }
@@ -216,7 +216,7 @@ public class QueueManager {
 
                     final int finalPosition = position;
                     // Default to 5 mins if no ETA set
-                    int eta = 5; 
+                    int eta = 5;
 
                     // Assign passenger
                     String queueKey = getQueueKey(stopName);
@@ -242,19 +242,19 @@ public class QueueManager {
 
                     // Update shuttle count
                     db.child("shuttles")
-                        .child(String.valueOf(allocated.getShuttleId()))
-                        .child("currentPassengers")
-                        .setValue(allocated.getCurrentPassengers() + 1);
+                            .child(String.valueOf(allocated.getShuttleId()))
+                            .child("currentPassengers")
+                            .setValue(allocated.getCurrentPassengers() + 1);
 
                     Log.d(TAG, "Directly allocated " + uid + " to shuttle " + allocated.getShuttleId());
 
                     // Return result
                     AssignmentResult result = new AssignmentResult(
-                        allocated.getShuttleId(),
-                        allocated.getPlateNumber(),
-                        stopName,
-                        finalPosition,
-                        eta
+                            allocated.getShuttleId(),
+                            allocated.getPlateNumber(),
+                            stopName,
+                            finalPosition,
+                            eta
                     );
                     onAssigned.accept(result);
 
@@ -276,118 +276,118 @@ public class QueueManager {
 
         String queueKey = getQueueKey(stopName);
         db.child("queue").child(queueKey).child(uid).removeValue()
-            .addOnSuccessListener(a -> Log.d(TAG, "Left queue at " + stopName))
-            .addOnFailureListener(e -> Log.e(TAG, "Error leaving queue: " + e.getMessage()));
+                .addOnSuccessListener(a -> Log.d(TAG, "Left queue at " + stopName))
+                .addOnFailureListener(e -> Log.e(TAG, "Error leaving queue: " + e.getMessage()));
     }
 
     // ─── Get sorted queue for a stop ─────────────────────
 
     public void getQueueForStop(String stopName,
-                                 Consumer<List<QueueEntry>> onSuccess,
-                                 Consumer<String> onFailure) {
+                                Consumer<List<QueueEntry>> onSuccess,
+                                Consumer<String> onFailure) {
         String queueKey = getQueueKey(stopName);
 
         db.child("queue").child(queueKey)
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    List<QueueEntry> queue = new ArrayList<>();
-                    for (DataSnapshot child : snapshot.getChildren()) {
-                        QueueEntry entry = child.getValue(QueueEntry.class);
-                        if (entry != null) {
-                            queue.add(entry);
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        List<QueueEntry> queue = new ArrayList<>();
+                        for (DataSnapshot child : snapshot.getChildren()) {
+                            QueueEntry entry = child.getValue(QueueEntry.class);
+                            if (entry != null) {
+                                queue.add(entry);
+                            }
                         }
+
+                        // Sort by timestamp — first in, first out
+                        Collections.sort(queue,
+                                Comparator.comparingLong(QueueEntry::getTimestamp));
+
+                        onSuccess.accept(queue);
                     }
-
-                    // Sort by timestamp — first in, first out
-                    Collections.sort(queue,
-                        Comparator.comparingLong(QueueEntry::getTimestamp));
-
-                    onSuccess.accept(queue);
-                }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    onFailure.accept(error.getMessage());
-                }
-            });
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        onFailure.accept(error.getMessage());
+                    }
+                });
     }
 
     // ─── Allocate passengers to shuttle ──────────────────
 
     public void allocatePassengersToShuttle(int shuttleId, String plateNumber,
-                                             String stopName, int etaMinutes,
-                                             Runnable onComplete) {
+                                            String stopName, int etaMinutes,
+                                            Runnable onComplete) {
         String queueKey = getQueueKey(stopName);
 
         // Get current passengers on shuttle
         db.child("shuttles").child(String.valueOf(shuttleId))
-            .child("currentPassengers")
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    int currentPassengers = snapshot.getValue(Integer.class) != null
-                        ? snapshot.getValue(Integer.class) : 0;
-                    int availableSlots = SHUTTLE_CAPACITY - currentPassengers;
+                .child("currentPassengers")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        int currentPassengers = snapshot.getValue(Integer.class) != null
+                                ? snapshot.getValue(Integer.class) : 0;
+                        int availableSlots = SHUTTLE_CAPACITY - currentPassengers;
 
-                    if (availableSlots <= 0) {
-                        Log.d(TAG, "Shuttle " + shuttleId + " is full");
-                        onComplete.run();
-                        return;
-                    }
-
-                    // Get sorted queue
-                    getQueueForStop(stopName, queue -> {
-                        int slotsToFill = Math.min(availableSlots, queue.size());
-                        Log.d(TAG, "Allocating " + slotsToFill +
-                            " passengers to shuttle " + shuttleId);
-
-                        for (int i = 0; i < slotsToFill; i++) {
-                            QueueEntry entry = queue.get(i);
-                            assignPassengerToShuttle(
-                                entry.getUid(),
-                                shuttleId,
-                                plateNumber,
-                                stopName,
-                                i + 1,  // position in queue
-                                etaMinutes
-                            );
+                        if (availableSlots <= 0) {
+                            Log.d(TAG, "Shuttle " + shuttleId + " is full");
+                            onComplete.run();
+                            return;
                         }
 
-                        // Update shuttle passenger count
-                        db.child("shuttles").child(String.valueOf(shuttleId))
-                            .child("currentPassengers")
-                            .setValue(currentPassengers + slotsToFill);
+                        // Get sorted queue
+                        getQueueForStop(stopName, queue -> {
+                            int slotsToFill = Math.min(availableSlots, queue.size());
+                            Log.d(TAG, "Allocating " + slotsToFill +
+                                    " passengers to shuttle " + shuttleId);
 
-                        onComplete.run();
+                            for (int i = 0; i < slotsToFill; i++) {
+                                QueueEntry entry = queue.get(i);
+                                assignPassengerToShuttle(
+                                        entry.getUid(),
+                                        shuttleId,
+                                        plateNumber,
+                                        stopName,
+                                        i + 1,  // position in queue
+                                        etaMinutes
+                                );
+                            }
 
-                    }, error -> {
-                        Log.e(TAG, "Queue error: " + error);
+                            // Update shuttle passenger count
+                            db.child("shuttles").child(String.valueOf(shuttleId))
+                                    .child("currentPassengers")
+                                    .setValue(currentPassengers + slotsToFill);
+
+                            onComplete.run();
+
+                        }, error -> {
+                            Log.e(TAG, "Queue error: " + error);
+                            onComplete.run();
+                        });
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
                         onComplete.run();
-                    });
-                }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    onComplete.run();
-                }
-            });
+                    }
+                });
     }
 
     // ─── Assign individual passenger to shuttle ──────────
 
     public void assignPassengerToShuttle(String uid, int shuttleId,
-                                           String plateNumber, String stopName,
-                                           int position, int etaMinutes) {
+                                         String plateNumber, String stopName,
+                                         int position, int etaMinutes) {
         String queueKey = getQueueKey(stopName);
 
         // Update queue entry
         db.child("queue").child(queueKey).child(uid)
-            .child("assignedShuttleId").setValue(shuttleId);
+                .child("assignedShuttleId").setValue(shuttleId);
         db.child("queue").child(queueKey).child(uid)
-            .child("assignedPlate").setValue(plateNumber);
+                .child("assignedPlate").setValue(plateNumber);
         db.child("queue").child(queueKey).child(uid)
-            .child("status").setValue("assigned");
+                .child("status").setValue("assigned");
         db.child("queue").child(queueKey).child(uid)
-            .child("queuePosition").setValue(position);
+                .child("queuePosition").setValue(position);
 
         // Update user node so passenger sees it on status card
         Map<String, Object> updates = new HashMap<>();
@@ -401,8 +401,8 @@ public class QueueManager {
         db.child("users").child(uid).updateChildren(updates);
 
         Log.d(TAG, "Assigned passenger " + uid +
-            " (position " + position + ") to shuttle " +
-            shuttleId + " (" + plateNumber + ")");
+                " (position " + position + ") to shuttle " +
+                shuttleId + " (" + plateNumber + ")");
     }
 
     // ─── Listen for passenger's assignment ───────────────
@@ -412,28 +412,28 @@ public class QueueManager {
         if (uid == null) return;
 
         db.child("users").child(uid)
-            .addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    User user = snapshot.getValue(User.class);
-                    if (user != null &&
-                        user.getAssignedShuttleId() > 0 &&
-                        user.getAssignedPlate() != null &&
-                        !user.getAssignedPlate().isEmpty()) {
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        User user = snapshot.getValue(User.class);
+                        if (user != null &&
+                                user.getAssignedShuttleId() > 0 &&
+                                user.getAssignedPlate() != null &&
+                                !user.getAssignedPlate().isEmpty()) {
 
-                        AssignmentResult result = new AssignmentResult(
-                            user.getAssignedShuttleId(),
-                            user.getAssignedPlate(),
-                            user.getAssignedStop(),
-                            user.getQueuePosition(),
-                            user.getEstimatedWaitMinutes()
-                        );
-                        onAssigned.accept(result);
+                            AssignmentResult result = new AssignmentResult(
+                                    user.getAssignedShuttleId(),
+                                    user.getAssignedPlate(),
+                                    user.getAssignedStop(),
+                                    user.getQueuePosition(),
+                                    user.getEstimatedWaitMinutes()
+                            );
+                            onAssigned.accept(result);
+                        }
                     }
-                }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {}
-            });
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
     }
 
     // ─── Helper ──────────────────────────────────────────

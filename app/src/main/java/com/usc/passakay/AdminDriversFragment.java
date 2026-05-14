@@ -40,7 +40,7 @@ public class AdminDriversFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_admin_drivers, container, false);
-        
+
         recyclerView = view.findViewById(R.id.recyclerShuttles);
         db = FirebaseDatabase.getInstance("https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
@@ -110,14 +110,14 @@ public class AdminDriversFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull ShuttleViewHolder holder, int position) {
             Shuttle shuttle = shuttleList.get(position);
-            
+
             final String currentDeviceId = (getActivity() instanceof BaseActivity) ? ((BaseActivity) getActivity()).getAppInstanceId() : "";
             String boundDeviceId = shuttle.getDeviceId();
             boolean isBound = boundDeviceId != null && !boundDeviceId.isEmpty();
             boolean isBoundToMe = currentDeviceId != null && !currentDeviceId.isEmpty() && currentDeviceId.equals(boundDeviceId);
 
             holder.tvName.setText("Shuttle " + shuttle.getShuttleId());
-            
+
             if (isBoundToMe) {
                 holder.tvPlate.setText("Plate: " + shuttle.getPlateNumber() + " (Bound to THIS phone)");
                 holder.btnBind.setText("UNBIND THIS PHONE");
@@ -140,7 +140,7 @@ public class AdminDriversFragment extends Fragment {
             // Filter drivers: Only show drivers not assigned to OTHER shuttles
             List<String> availableNames = new ArrayList<>();
             List<String> availableIds = new ArrayList<>();
-            
+
             availableNames.add(driverNames.get(0)); // "No Driver"
             availableIds.add(driverIds.get(0));     // ""
 
@@ -211,40 +211,26 @@ public class AdminDriversFragment extends Fragment {
 
     private void clearDeviceBinding(int shuttleId) {
         db.child("shuttles").child(String.valueOf(shuttleId)).child("deviceId").setValue("")
-            .addOnSuccessListener(a -> Toast.makeText(getContext(), "Device binding cleared remotely", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(a -> Toast.makeText(getContext(), "Device binding cleared remotely", Toast.LENGTH_SHORT).show());
     }
 
     private void updateShuttleAssignment(Shuttle shuttle, String newDriverId, String newDriverName) {
         int shuttleId = shuttle.getShuttleId();
-        
-        // 1. Remove old driver's assignment from their user profile
+
         if (shuttle.getDriverId() != null && !shuttle.getDriverId().isEmpty()) {
             db.child("users").child(shuttle.getDriverId()).child("assignedShuttleId").setValue(-1);
         }
-        
-        // 2. If assigning a new driver, ensure they are removed from any previous shuttle (1-to-1 restriction)
+
         if (!newDriverId.isEmpty()) {
-            for (Shuttle otherShuttle : shuttleList) {
-                if (otherShuttle.getShuttleId() != shuttleId && newDriverId.equals(otherShuttle.getDriverId())) {
-                    // Unassign from other shuttle
-                    DatabaseReference otherRef = db.child("shuttles").child(String.valueOf(otherShuttle.getShuttleId()));
-                    otherRef.child("driverId").setValue("");
-                    otherRef.child("driverName").setValue("No driver");
-                    otherRef.child("status").setValue("Standby");
-                    otherRef.child("active").setValue(false);
-                }
-            }
-            // Update the new driver's profile
             db.child("users").child(newDriverId).child("assignedShuttleId").setValue(shuttleId);
         }
 
-        // 3. Update the current shuttle
         DatabaseReference shuttleRef = db.child("shuttles").child(String.valueOf(shuttleId));
         shuttleRef.child("driverId").setValue(newDriverId);
         shuttleRef.child("driverName").setValue(newDriverName);
         shuttleRef.child("status").setValue(newDriverId.isEmpty() ? "Standby" : "Deployed");
         shuttleRef.child("active").setValue(!newDriverId.isEmpty());
-        
-        Toast.makeText(getContext(), "Assignment updated (1 Driver per Shuttle enforced)", Toast.LENGTH_SHORT).show();
+
+        Toast.makeText(getContext(), "Assignment updated", Toast.LENGTH_SHORT).show();
     }
 }

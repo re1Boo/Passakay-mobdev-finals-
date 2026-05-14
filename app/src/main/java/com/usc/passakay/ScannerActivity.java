@@ -139,33 +139,33 @@ public class ScannerActivity extends AppCompatActivity {
         runOnUiThread(() -> Toast.makeText(this, "Finding your shuttle at " + stopName + "...", Toast.LENGTH_SHORT).show());
 
         queueManager.joinQueueAndAllocate(stopName,
-            result -> {
-                AIShuttleManager aiManager = new AIShuttleManager(this);
-                aiManager.runAIManagement();
+                result -> {
+                    AIShuttleManager aiManager = new AIShuttleManager(this);
+                    aiManager.runAIManagement();
 
-                runOnUiThread(() -> {
-                    Toast.makeText(this,
-                        "✅ Shuttle Assigned!\n" +
-                        "Bus " + result.getShuttleId() +
-                        " • " + result.getPlateNumber() +
-                        "\nQueue #" + result.getQueuePosition() +
-                        "\nETA: ~" + result.getEtaMinutes() + " mins",
-                        Toast.LENGTH_LONG).show();
-                    finish();
-                });
-            },
-            error -> runOnUiThread(() -> {
-                if ("No available shuttles right now".equals(error)) {
-                    Toast.makeText(this,
-                        "You joined the queue at " + stopName +
-                        "\nWaiting for a shuttle to become available...",
-                        Toast.LENGTH_LONG).show();
-                    finish();
-                } else {
-                    Toast.makeText(this, "Error: " + error, Toast.LENGTH_SHORT).show();
-                    isScanning = false;
-                }
-            })
+                    runOnUiThread(() -> {
+                        Toast.makeText(this,
+                                "✅ Shuttle Assigned!\n" +
+                                        "Bus " + result.getShuttleId() +
+                                        " • " + result.getPlateNumber() +
+                                        "\nQueue #" + result.getQueuePosition() +
+                                        "\nETA: ~" + result.getEtaMinutes() + " mins",
+                                Toast.LENGTH_LONG).show();
+                        finish();
+                    });
+                },
+                error -> runOnUiThread(() -> {
+                    if ("No available shuttles right now".equals(error)) {
+                        Toast.makeText(this,
+                                "You joined the queue at " + stopName +
+                                        "\nWaiting for a shuttle to become available...",
+                                Toast.LENGTH_LONG).show();
+                        finish();
+                    } else {
+                        Toast.makeText(this, "Error: " + error, Toast.LENGTH_SHORT).show();
+                        isScanning = false;
+                    }
+                })
         );
     }
 
@@ -182,7 +182,7 @@ public class ScannerActivity extends AppCompatActivity {
         if (lower.contains("dorm")) return "USC Dormitory";
         if (lower.contains("chapel")) return "Chapel";
         if (lower.contains("among")) return "AMONG BALAY";
-        
+
         // Remove .com if present
         return raw.replace(".com", "").trim();
     }
