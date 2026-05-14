@@ -217,20 +217,34 @@ public class AdminDriversFragment extends Fragment {
     private void updateShuttleAssignment(Shuttle shuttle, String newDriverId, String newDriverName) {
         int shuttleId = shuttle.getShuttleId();
         
+        // 1. Remove old driver's assignment from their user profile
         if (shuttle.getDriverId() != null && !shuttle.getDriverId().isEmpty()) {
             db.child("users").child(shuttle.getDriverId()).child("assignedShuttleId").setValue(-1);
         }
         
+        // 2. If assigning a new driver, ensure they are removed from any previous shuttle (1-to-1 restriction)
         if (!newDriverId.isEmpty()) {
+            for (Shuttle otherShuttle : shuttleList) {
+                if (otherShuttle.getShuttleId() != shuttleId && newDriverId.equals(otherShuttle.getDriverId())) {
+                    // Unassign from other shuttle
+                    DatabaseReference otherRef = db.child("shuttles").child(String.valueOf(otherShuttle.getShuttleId()));
+                    otherRef.child("driverId").setValue("");
+                    otherRef.child("driverName").setValue("No driver");
+                    otherRef.child("status").setValue("Standby");
+                    otherRef.child("active").setValue(false);
+                }
+            }
+            // Update the new driver's profile
             db.child("users").child(newDriverId).child("assignedShuttleId").setValue(shuttleId);
         }
 
+        // 3. Update the current shuttle
         DatabaseReference shuttleRef = db.child("shuttles").child(String.valueOf(shuttleId));
         shuttleRef.child("driverId").setValue(newDriverId);
         shuttleRef.child("driverName").setValue(newDriverName);
         shuttleRef.child("status").setValue(newDriverId.isEmpty() ? "Standby" : "Deployed");
         shuttleRef.child("active").setValue(!newDriverId.isEmpty());
         
-        Toast.makeText(getContext(), "Assignment updated", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), "Assignment updated (1 Driver per Shuttle enforced)", Toast.LENGTH_SHORT).show();
     }
 }

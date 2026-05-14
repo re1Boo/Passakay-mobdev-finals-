@@ -120,6 +120,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         btnCancelRide.setOnClickListener(v -> confirmCancelRide());
         findViewById(R.id.fabScanQR).setOnClickListener(v -> startActivity(new Intent(this, ScannerActivity.class)));
         findViewById(R.id.fabMyLocation).setOnClickListener(v -> panToMyLocation());
+        findViewById(R.id.fabAIChat).setOnClickListener(v -> startActivity(new Intent(this, AIChatActivity.class)));
 
         loadShuttles();
         setupBottomNav();
@@ -467,6 +468,14 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             googleMap.setMyLocationEnabled(true);
         }
+        
+        // Suggestion #2: Map Barrier (Campus Bounds)
+        LatLng southWest = new LatLng(10.345, 123.900);
+        LatLng northEast = new LatLng(10.365, 123.925);
+        LatLngBounds campusBounds = new LatLngBounds(southWest, northEast);
+        googleMap.setLatLngBoundsForCameraTarget(campusBounds);
+        googleMap.setMinZoomPreference(15.0f);
+
         LatLng campus = new LatLng(USC_LAT, USC_LNG);
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(campus, 16.5f));
         loadStopsOnMap();

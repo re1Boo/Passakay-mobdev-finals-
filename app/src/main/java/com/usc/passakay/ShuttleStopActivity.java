@@ -172,39 +172,80 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         String stopName = stopItem.getStopName();
         String stopKey = getScanKey(stopName);
 
+        // 1. Get everyone who scanned the QR code at this stop
         db.child("scans").child(stopKey).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                Map<String, Object> childUpdates = new HashMap<>();
-                int boardingCount = 0;
+            public void onDataChange(@NonNull DataSnapshot scanSnapshot) {
+                // 2. Fetch all users to check their current proximity to the shuttle
+                db.child("users").addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot usersSnapshot) {
+                        Map<String, Object> updates = new HashMap<>();
+                        int boarded = 0;
+                        int leftBehind = 0;
 
-                for (DataSnapshot userSnap : snapshot.getChildren()) {
-                    String uid = userSnap.getKey();
-                    if (uid != null && !uid.equals("_count")) {
-                        childUpdates.put("/users/" + uid + "/isWaiting", false);
-                        childUpdates.put("/users/" + uid + "/waitingAt", "");
-                        childUpdates.put("/users/" + uid + "/isRiding", true);
-                        if (shuttleId != null) {
-                            try { childUpdates.put("/users/" + uid + "/ridingShuttleId", Integer.parseInt(shuttleId)); }
-                            catch (NumberFormatException ignored) {}
+                        for (DataSnapshot userInScan : scanSnapshot.getChildren()) {
+                            String uid = userInScan.getKey();
+                            if (uid == null || uid.equals("_count")) continue;
+
+                            DataSnapshot userDetails = usersSnapshot.child(uid);
+                            Double pLat = userDetails.child("currentLat").getValue(Double.class);
+                            Double pLng = userDetails.child("currentLng").getValue(Double.class);
+
+                            // Suggestion #3: Only board those physically near the shuttle (within 40 meters)
+                            boolean isNear = false;
+                            if (pLat != null && pLng != null) {
+                                float[] dist = new float[1];
+                                Location.distanceBetween(driverLat, driverLng, pLat, pLng, dist);
+                                if (dist[0] <= 40) isNear = true;
+                            }
+
+                            if (isNear) {
+                                updates.put("/users/" + uid + "/isWaiting", false);
+                                updates.put("/users/" + uid + "/waitingAt", "");
+                                updates.put("/users/" + uid + "/isRiding", true);
+                                if (shuttleId != null) {
+                                    try { updates.put("/users/" + uid + "/ridingShuttleId", Integer.parseInt(shuttleId)); }
+                                    catch (NumberFormatException ignored) {}
+                                }
+                                // Remove from scan list
+                                updates.put("/scans/" + stopKey + "/" + uid, null);
+                                boarded++;
+                            } else {
+                                leftBehind++;
+                            }
                         }
-                        boardingCount++;
+
+                        if (boarded == 0) {
+                            Toast.makeText(ShuttleStopActivity.this, "No passengers near the shuttle to board.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        // Update the waiting count for the stop based only on those who boarded
+                        final int finalBoarded = boarded;
+                        final int finalLeftBehind = leftBehind;
+                        
+                        db.child("stopWaitingCounts").child(stopKey).runTransaction(new com.google.firebase.database.Transaction.Handler() {
+                            @NonNull
+                            @Override
+                            public com.google.firebase.database.Transaction.Result doTransaction(@NonNull com.google.firebase.database.MutableData mutableData) {
+                                Integer count = mutableData.getValue(Integer.class);
+                                if (count != null) {
+                                    mutableData.setValue(Math.max(0, count - finalBoarded));
+                                }
+                                return com.google.firebase.database.Transaction.success(mutableData);
+                            }
+                            @Override
+                            public void onComplete(com.google.firebase.database.DatabaseError e, boolean b, com.google.firebase.database.DataSnapshot s) {
+                                db.updateChildren(updates).addOnSuccessListener(aVoid -> {
+                                    String msg = "Boarded " + finalBoarded + " passengers.";
+                                    if (finalLeftBehind > 0) msg += " " + finalLeftBehind + " left behind (Too far).";
+                                    Toast.makeText(ShuttleStopActivity.this, msg, Toast.LENGTH_LONG).show();
+                                });
+                            }
+                        });
                     }
-                }
-
-                if (boardingCount == 0) {
-                    Toast.makeText(ShuttleStopActivity.this, "Queue updated; no passengers to board.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                childUpdates.put("/scans/" + stopKey, null);
-                childUpdates.put("/stopWaitingCounts/" + stopKey, 0);
-
-                final int finalBoardingCount = boardingCount;
-                db.updateChildren(childUpdates).addOnSuccessListener(aVoid -> {
-                    Toast.makeText(ShuttleStopActivity.this, "Successfully boarded " + finalBoardingCount + " passengers!", Toast.LENGTH_SHORT).show();
-                }).addOnFailureListener(e -> {
-                    Toast.makeText(ShuttleStopActivity.this, "Boarding failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
                 });
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {}
@@ -400,6 +441,13 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         MapsInitializer.initialize(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) googleMap.setMyLocationEnabled(true);
         
+        // Suggestion #2: Map Barrier (Campus Bounds)
+        LatLng southWest = new LatLng(10.345, 123.900);
+        LatLng northEast = new LatLng(10.365, 123.925);
+        LatLngBounds campusBounds = new LatLngBounds(southWest, northEast);
+        googleMap.setLatLngBoundsForCameraTarget(campusBounds);
+        googleMap.setMinZoomPreference(15.0f);
+
         LatLng shuttleLoc = new LatLng(driverLat, driverLng);
         driverMarker = googleMap.addMarker(new MarkerOptions().position(shuttleLoc).icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
         

@@ -46,6 +46,7 @@
         <activity android:name=".ShuttleStopActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".ScannerActivity" />
+        <activity android:name=".AIChatActivity" />
 
         <service
             android:name=".NotificationService"
