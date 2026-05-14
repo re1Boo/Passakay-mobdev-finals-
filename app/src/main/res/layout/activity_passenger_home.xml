@@ -19,12 +19,11 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Overlay Content -->
+        <!-- Overlay Content (Z-ordered behind bottom sheet) -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <!-- Header -->
             <include
                 android:id="@+id/header"
                 layout="@layout/header"
@@ -32,7 +31,6 @@
                 android:layout_height="wrap_content"
                 app:layout_constraintTop_toTopOf="parent"/>
 
-            <!-- Status Card -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardStatus"
                 android:layout_width="match_parent"
@@ -90,7 +88,6 @@
                                 android:fontFamily="@font/kanit"
                                 android:layout_marginTop="2dp"/>
 
-                            <!-- Cancel Ride Button -->
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnCancelRide"
                                 android:layout_width="wrap_content"
@@ -107,7 +104,6 @@
                                 android:insetTop="0dp"
                                 android:insetBottom="0dp"/>
 
-                            <!-- Trip Progress UI -->
                             <LinearLayout
                                 android:id="@+id/layoutTripProgress"
                                 android:layout_width="match_parent"
@@ -149,91 +145,9 @@
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
-
-            <!-- Announcement Bar -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/cardAnnouncement"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginTop="8dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="#FFF9C4"
-                android:visibility="gone"
-                app:layout_constraintTop_toBottomOf="@id/cardStatus">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="8dp">
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@android:drawable/ic_dialog_info"
-                        android:layout_marginEnd="8dp"
-                        app:tint="#FBC02D"/>
-
-                    <TextView
-                        android:id="@+id/tvNewBadge"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="NEW"
-                        android:textColor="#FFFFFF"
-                        android:textSize="9sp"
-                        android:textStyle="bold"
-                        android:background="@android:color/holo_red_dark"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:layout_marginEnd="6dp"
-                        android:visibility="gone"/>
-
-                    <TextView
-                        android:id="@+id/tvAnnouncement"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Shuttle operation is normal today."
-                        android:textColor="#5D4037"
-                        android:textSize="12sp"
-                        android:fontFamily="@font/kanit"
-                        android:ellipsize="marquee"
-                        android:singleLine="true"
-                        android:marqueeRepeatLimit="marquee_forever"
-                        android:scrollHorizontally="true"/>
-
-                    <TextView
-                        android:id="@+id/tvAnnouncementTime"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Just now"
-                        android:textColor="#8D6E63"
-                        android:textSize="10sp"
-                        android:fontFamily="@font/kanit"
-                        android:layout_marginStart="8dp"/>
-
-                    <ImageView
-                        android:id="@+id/ivDismissAnnouncement"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@android:drawable/ic_menu_close_clear_cancel"
-                        android:layout_marginStart="4dp"
-                        android:padding="12dp"
-                        app:tint="#8D6E63"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?attr/selectableItemBackgroundBorderless"/>
-
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- RESTORED: Draggable Bottom Sheet -->
+        <!-- Draggable Bottom Sheet -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/bottomSheet"
             android:layout_width="match_parent"
@@ -279,6 +193,86 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
+        <!-- TOP LAYER: Announcement Bar moved outside inner layout to ensure clickability -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardAnnouncement"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="140dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="12dp"
+            app:cardBackgroundColor="#FFF9C4"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_dialog_info"
+                    android:layout_marginEnd="8dp"
+                    app:tint="#FBC02D"/>
+
+                <TextView
+                    android:id="@+id/tvNewBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="NEW"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:background="@android:color/holo_red_dark"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:layout_marginEnd="6dp"
+                    android:visibility="gone"/>
+
+                <TextView
+                    android:id="@+id/tvAnnouncement"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Shuttle operation is normal today."
+                    android:textColor="#5D4037"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/kanit"
+                    android:ellipsize="marquee"
+                    android:singleLine="true"
+                    android:marqueeRepeatLimit="marquee_forever"
+                    android:scrollHorizontally="true"/>
+
+                <TextView
+                    android:id="@+id/tvAnnouncementTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Just now"
+                    android:textColor="#8D6E63"
+                    android:textSize="10sp"
+                    android:fontFamily="@font/kanit"
+                    android:layout_marginStart="8dp"/>
+
+                <ImageView
+                    android:id="@+id/ivDismissAnnouncement"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:layout_marginStart="8dp"
+                    android:padding="8dp"
+                    app:tint="#8D6E63"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"/>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
@@ -286,7 +280,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#ffffff"
-        app:menu="@menu/menu"
+        app:menu="@menu/menu_passenger"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton

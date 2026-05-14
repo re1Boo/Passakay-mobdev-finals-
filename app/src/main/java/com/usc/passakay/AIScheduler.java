@@ -14,7 +14,7 @@ import com.google.firebase.database.ValueEventListener;
 public class AIScheduler {
 
     private static final String TAG      = "AIScheduler";
-    private static final long MIN_INTERVAL = 30_000;  // minimum 30 seconds between calls
+    private static final long MIN_INTERVAL = 300_000;  // 5 minutes (saves quota)
     private static final String DB_URL =
         "https://passakay-c787c-default-rtdb.asia-southeast1.firebasedatabase.app/";
 

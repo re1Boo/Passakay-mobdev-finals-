@@ -159,9 +159,9 @@ public class AIChatActivity extends BaseActivity {
             return;
         }
 
-        // Show masked key for debugging
-        String maskedKey = GEMINI_API_KEY.substring(0, 4) + "..." + GEMINI_API_KEY.substring(GEMINI_API_KEY.length() - 4);
-        Log.d("AIChat", "Using Key: " + maskedKey);
+        // DEBUG: Extract last 4 digits of the key to verify it's the NEW one (should end in Suu7A)
+        String keyEnd = (GEMINI_API_KEY.length() > 4) ? GEMINI_API_KEY.substring(GEMINI_API_KEY.length() - 4) : "****";
+        Log.d("AIChat", "API Key ending with: " + keyEnd);
 
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + GEMINI_API_KEY;
 

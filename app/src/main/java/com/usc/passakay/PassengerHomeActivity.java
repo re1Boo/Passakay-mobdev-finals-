@@ -20,6 +20,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -39,6 +40,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.material.behavior.SwipeDismissBehavior;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
@@ -67,10 +69,11 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private DatabaseReference db;
     
     private MaterialButton btnWaitingStatus, btnCancelRide;
-    private TextView tvUserLoc, tvNextStop, tvNearestStopDistance;
+    private TextView tvUserLoc, tvNextStop, tvNearestStopDistance, tvAnnouncement;
     private LinearLayout layoutTripProgress;
     private ProgressBar progressBarTrip;
-    private CardView cardStatus;
+    private CardView cardStatus, cardAnnouncement;
+    private String lastDismissedAnnouncementId = "";
     
     private boolean isWaiting = false;
     private boolean isRiding = false;
@@ -106,6 +109,8 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         tvNearestStopDistance = findViewById(R.id.tvNearestStopDistance);
         layoutTripProgress = findViewById(R.id.layoutTripProgress);
         progressBarTrip = findViewById(R.id.progressBarTrip);
+        cardAnnouncement = findViewById(R.id.cardAnnouncement);
+        tvAnnouncement = findViewById(R.id.tvAnnouncement);
 
         mapView = findViewById(R.id.mapViewMain);
         mapView.onCreate(savedInstanceState);
@@ -122,7 +127,15 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         findViewById(R.id.fabMyLocation).setOnClickListener(v -> panToMyLocation());
         findViewById(R.id.fabAIChat).setOnClickListener(v -> startActivity(new Intent(this, AIChatActivity.class)));
 
+        View ivDismiss = findViewById(R.id.ivDismissAnnouncement);
+        if (ivDismiss != null) {
+            ivDismiss.setOnClickListener(v -> dismissAnnouncement());
+        }
+
+        setupSwipeToDismiss();
+
         loadShuttles();
+        loadAnnouncements();
         setupBottomNav();
         startLocationUpdates();
         syncUserStatus();
@@ -440,6 +453,93 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                 db.child("users").child(uid).child("isWaiting").setValue(true);
             }
         }
+    }
+
+    private long currentAnnouncementTimestamp = 0;
+
+    private void dismissAnnouncement() {
+        cardAnnouncement.setVisibility(View.GONE);
+        lastDismissedAnnouncementId = currentAnnouncementTimestamp + "";
+    }
+
+    private void setupSwipeToDismiss() {
+        final SwipeDismissBehavior<CardView> swipe = new SwipeDismissBehavior<>();
+        swipe.setSwipeDirection(SwipeDismissBehavior.SWIPE_DIRECTION_ANY);
+        swipe.setListener(new SwipeDismissBehavior.OnDismissListener() {
+            @Override
+            public void onDismiss(View view) {
+                dismissAnnouncement();
+            }
+            @Override public void onDragStateChanged(int state) {}
+        });
+
+        CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) cardAnnouncement.getLayoutParams();
+        params.setBehavior(swipe);
+    }
+
+    private void loadAnnouncements() {
+        if (cardAnnouncement == null || tvAnnouncement == null) return;
+
+        db.child("announcements").child("current").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    String message = snapshot.child("message").getValue(String.class);
+                    String priority = snapshot.child("priority").getValue(String.class);
+                    Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
+                    long timestamp = snapshot.child("timestamp").getValue(Long.class) != null ? snapshot.child("timestamp").getValue(Long.class) : 0;
+                    
+                    currentAnnouncementTimestamp = timestamp;
+
+                    // If the user already dismissed this specific announcement, keep it hidden
+                    if (String.valueOf(timestamp).equals(lastDismissedAnnouncementId)) {
+                        cardAnnouncement.setVisibility(View.GONE);
+                        return;
+                    }
+
+                    if (expiresAt != null && System.currentTimeMillis() > expiresAt) {
+                        cardAnnouncement.setVisibility(View.GONE);
+                        return;
+                    }
+
+                    tvAnnouncement.setText(message);
+                    tvAnnouncement.setSelected(true); // For marquee effect
+                    cardAnnouncement.setVisibility(View.VISIBLE);
+
+                    // Update Badge and Time if they exist in layout
+                    View newBadge = findViewById(R.id.tvNewBadge);
+                    if (newBadge != null) {
+                        boolean isRecent = (System.currentTimeMillis() - timestamp) < (5 * 60 * 1000); // 5 mins
+                        newBadge.setVisibility(isRecent ? View.VISIBLE : View.GONE);
+                    }
+
+                    TextView tvTime = findViewById(R.id.tvAnnouncementTime);
+                    if (tvTime != null && timestamp > 0) {
+                        tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(timestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
+                    }
+
+                    // Priority Colors
+                    if ("warning".equals(priority)) {
+                        cardAnnouncement.setCardBackgroundColor(Color.parseColor("#FFE0B2"));
+                    } else if ("emergency".equals(priority)) {
+                        cardAnnouncement.setCardBackgroundColor(Color.parseColor("#FFCDD2"));
+                        // Optional pulse animation
+                        android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
+                        pulse.setDuration(800);
+                        pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
+                        pulse.setRepeatCount(android.view.animation.Animation.INFINITE);
+                        cardAnnouncement.startAnimation(pulse);
+                    } else {
+                        cardAnnouncement.setCardBackgroundColor(Color.parseColor("#FFF9C4"));
+                        cardAnnouncement.clearAnimation();
+                    }
+                } else {
+                    cardAnnouncement.setVisibility(View.GONE);
+                }
+            }
+
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
 
     private void loadShuttles() {
