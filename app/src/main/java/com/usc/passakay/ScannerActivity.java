@@ -133,15 +133,13 @@ public class ScannerActivity extends AppCompatActivity {
             return;
         }
 
-        String stopName = qrContent.replace(".com", "").trim();
+        String stopName = normalizeStopName(qrContent);
         QueueManager queueManager = new QueueManager();
 
-        runOnUiThread(() -> Toast.makeText(this, "Finding your shuttle...", Toast.LENGTH_SHORT).show());
+        runOnUiThread(() -> Toast.makeText(this, "Finding your shuttle at " + stopName + "...", Toast.LENGTH_SHORT).show());
 
-        // ✅ Use direct allocation logic to avoid being stuck
         queueManager.joinQueueAndAllocate(stopName,
             result -> {
-                // Manually trigger the AI dispatch to optimize background state
                 AIShuttleManager aiManager = new AIShuttleManager(this);
                 aiManager.runAIManagement();
 
@@ -169,6 +167,24 @@ public class ScannerActivity extends AppCompatActivity {
                 }
             })
         );
+    }
+
+    private String normalizeStopName(String raw) {
+        if (raw == null) return "Unknown";
+        String lower = raw.toLowerCase().trim();
+        if (lower.contains("bunzel")) return "Bunzel";
+        if (lower.contains("safad")) return "SAFAD Building";
+        if (lower.contains("pe")) return "PE Building";
+        if (lower.contains("mr")) return "MR Building";
+        if (lower.contains("lrc")) return "LRC Building";
+        if (lower.contains("shcp")) return "SHCP Building";
+        if (lower.contains("portal")) return "Portal Terminal";
+        if (lower.contains("dorm")) return "USC Dormitory";
+        if (lower.contains("chapel")) return "Chapel";
+        if (lower.contains("among")) return "AMONG BALAY";
+        
+        // Remove .com if present
+        return raw.replace(".com", "").trim();
     }
 
     @Override

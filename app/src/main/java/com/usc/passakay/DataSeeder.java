@@ -27,7 +27,7 @@ public class DataSeeder {
         seedCourses();
         seedShuttles();
         seedShuttleStops();
-        // seedUsers(); // REMOVED: To prevent hijacking existing sessions in SplashActivity
+        seedUsers(); 
     }
 
     private void seedDepartments() {
@@ -138,22 +138,19 @@ public class DataSeeder {
     }
 
     public void seedUsers() {
-        // Fix: Skip seeding if someone is already logged in to prevent session hijacking
         if (mAuth.getCurrentUser() != null) {
             Log.d(TAG, "User already logged in, skipping user seeding.");
             return;
         }
 
-        // Admin
         createUser("admin@passakay.com", "admin123456", "00000001", "admin", -1);
-        
-        // Drivers
         createUser("driver@passakay.com", "password123", "20000001", "driver", 1);
         createUser("driver1@passakay.com", "password123", "D001", "driver", 1);
         createUser("driver2@passakay.com", "password123", "D002", "driver", 2);
-        
-        // Passenger
         createUser("passenger@passakay.com", "password123", "21101234", "passenger", -1);
+        
+        // Added requested passenger account
+        createUser("user24100679@passakay.com", "50c14813", "24100679", "passenger", -1);
     }
 
     private void createUser(String email, String password, String studentId, String role, int assignedShuttleId) {
@@ -163,7 +160,6 @@ public class DataSeeder {
                 })
                 .addOnFailureListener(e -> {
                     if (e instanceof FirebaseAuthUserCollisionException) {
-                        // Fix: Do NOT call signInWithEmailAndPassword here as it hijacks the current session
                         Log.d(TAG, "User already exists in Auth: " + email);
                     } else {
                         Log.e(TAG, "Failed to create user " + email + ": " + e.getMessage());

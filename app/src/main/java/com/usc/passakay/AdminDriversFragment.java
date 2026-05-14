@@ -24,7 +24,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class AdminDriversFragment extends Fragment {
 
@@ -135,19 +137,41 @@ public class AdminDriversFragment extends Fragment {
                 }
             });
 
-            ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, driverNames);
+            // Filter drivers: Only show drivers not assigned to OTHER shuttles
+            List<String> availableNames = new ArrayList<>();
+            List<String> availableIds = new ArrayList<>();
+            
+            availableNames.add(driverNames.get(0)); // "No Driver"
+            availableIds.add(driverIds.get(0));     // ""
+
+            Set<String> driversOnOtherShuttles = new HashSet<>();
+            for (Shuttle s : shuttleList) {
+                if (s.getShuttleId() != shuttle.getShuttleId() && s.getDriverId() != null && !s.getDriverId().isEmpty()) {
+                    driversOnOtherShuttles.add(s.getDriverId());
+                }
+            }
+
+            for (int i = 1; i < driverIds.size(); i++) {
+                String dId = driverIds.get(i);
+                if (!driversOnOtherShuttles.contains(dId)) {
+                    availableNames.add(driverNames.get(i));
+                    availableIds.add(dId);
+                }
+            }
+
+            ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, availableNames);
             spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             holder.spinnerDrivers.setAdapter(spinnerAdapter);
 
-            int selectionIndex = driverIds.indexOf(shuttle.getDriverId());
+            int selectionIndex = availableIds.indexOf(shuttle.getDriverId());
             holder.spinnerDrivers.setSelection(selectionIndex < 0 ? 0 : selectionIndex, false);
 
             holder.spinnerDrivers.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-                    String newDriverId = driverIds.get(pos);
+                    String newDriverId = availableIds.get(pos);
                     if (!newDriverId.equals(shuttle.getDriverId())) {
-                        updateShuttleAssignment(shuttle, newDriverId, driverNames.get(pos));
+                        updateShuttleAssignment(shuttle, newDriverId, availableNames.get(pos));
                     }
                 }
                 @Override public void onNothingSelected(AdapterView<?> parent) {}

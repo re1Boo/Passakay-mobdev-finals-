@@ -7,7 +7,9 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.MutableData;
 import com.google.firebase.database.ServerValue;
+import com.google.firebase.database.Transaction;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -56,6 +58,13 @@ public class QueueManager {
                         return;
                     }
 
+                    // Mark user as waiting immediately
+                    Map<String, Object> userUpdates = new HashMap<>();
+                    userUpdates.put("isWaiting", true);
+                    userUpdates.put("waitingAt", stopName);
+                    userUpdates.put("waitingStartTime", ServerValue.TIMESTAMP);
+                    db.child("users").child(uid).updateChildren(userUpdates);
+
                     // Add to queue with server timestamp
                     Map<String, Object> entry = new HashMap<>();
                     entry.put("uid",               uid);
@@ -69,6 +78,7 @@ public class QueueManager {
                         .setValue(entry)
                         .addOnSuccessListener(a -> {
                             Log.d(TAG, "Joined queue at " + stopName);
+                            updateLegacyScanNodes(uid, stopName);
                             onSuccess.run();
                         })
                         .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
@@ -92,6 +102,13 @@ public class QueueManager {
 
         String queueKey = getQueueKey(stopName);
 
+        // Mark user as waiting immediately
+        Map<String, Object> userUpdates = new HashMap<>();
+        userUpdates.put("isWaiting", true);
+        userUpdates.put("waitingAt", stopName);
+        userUpdates.put("waitingStartTime", ServerValue.TIMESTAMP);
+        db.child("users").child(uid).updateChildren(userUpdates);
+
         Map<String, Object> entry = new HashMap<>();
         entry.put("uid",              uid);
         entry.put("stopName",         stopName);
@@ -104,10 +121,59 @@ public class QueueManager {
             .setValue(entry)
             .addOnSuccessListener(a -> {
                 Log.d(TAG, "Joined queue at " + stopName);
+                updateLegacyScanNodes(uid, stopName);
                 // Find nearest active shuttle and allocate directly
                 findAndAllocateShuttle(uid, stopName, onAssigned, onFailure);
             })
             .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
+    }
+
+    private void updateLegacyScanNodes(String uid, String stopName) {
+        String scanKey = getScanKey(stopName);
+        Log.d(TAG, "Updating legacy scan nodes for: " + scanKey);
+        
+        // Update 'scans' node
+        db.child("scans").child(scanKey).child(uid).setValue(true);
+        
+        // Update 'stopWaitingCounts' node
+        db.child("stopWaitingCounts").child(scanKey).runTransaction(new Transaction.Handler() {
+            @NonNull
+            @Override
+            public Transaction.Result doTransaction(@NonNull MutableData mutableData) {
+                Integer currentCount = mutableData.getValue(Integer.class);
+                if (currentCount == null) {
+                    mutableData.setValue(1);
+                } else {
+                    mutableData.setValue(currentCount + 1);
+                }
+                return Transaction.success(mutableData);
+            }
+
+            @Override
+            public void onComplete(DatabaseError error, boolean committed, DataSnapshot snapshot) {
+                if (error != null) {
+                    Log.e(TAG, "Failed to update stopWaitingCounts: " + error.getMessage());
+                } else {
+                    Log.d(TAG, "stopWaitingCounts updated for " + scanKey);
+                }
+            }
+        });
+    }
+
+    private String getScanKey(String stopName) {
+        if (stopName == null) return "unknown_com";
+        String lower = stopName.toLowerCase();
+        if (lower.contains("safad")) return "SAFAD Building_com";
+        if (lower.contains("bunzel")) return "Bunzel_com";
+        if (lower.contains("dorm")) return "USC Dormitory_com";
+        if (lower.contains("portal")) return "Portal Terminal_com";
+        if (lower.contains("pe")) return "PE Building_com";
+        if (lower.contains("shcp")) return "SHCP Building_com";
+        if (lower.contains("lrc")) return "LRC Building_com";
+        if (lower.contains("mr")) return "MR Building_com";
+        if (lower.contains("chapel")) return "Chapel_com";
+        if (lower.contains("among")) return "AMONG BALAY_com";
+        return stopName + "_com";
     }
 
     private void findAndAllocateShuttle(String uid, String stopName,
@@ -373,6 +439,7 @@ public class QueueManager {
     // ─── Helper ──────────────────────────────────────────
 
     private String getQueueKey(String stopName) {
+        if (stopName == null) return "unknown";
         return stopName.replace(" ", "_").replace("/", "_");
     }
 }
