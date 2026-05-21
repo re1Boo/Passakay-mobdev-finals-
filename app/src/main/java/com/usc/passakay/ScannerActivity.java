@@ -2,6 +2,7 @@ package com.usc.passakay;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageButton;
@@ -15,14 +16,16 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
 import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.common.InputImage;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,18 +33,33 @@ import java.util.concurrent.Executors;
 public class ScannerActivity extends AppCompatActivity {
 
     private static final String TAG = "ScannerActivity";
-    private static final int PERMISSION_CODE_CAMERA = 1;
+    private static final int PERMISSION_REQUEST_CODE = 123;
+
     private PreviewView previewView;
     private ExecutorService cameraExecutor;
+    private FusedLocationProviderClient fusedLocationClient;
     private boolean isScanning = false;
     private String destination = "";
+
+    // Hardcoded stop coordinates for verification (Synced with DataSeeder)
+    private final Map<String, LatLng> stopCoords = new HashMap<String, LatLng>() {{
+        put("Bunzel", new LatLng(10.351988679046595, 123.91350931757974));
+        put("Portal Terminal", new LatLng(10.353133958676839, 123.91395314438697));
+        put("USC Dormitory", new LatLng(10.354723899012651, 123.91212867070087));
+        put("PE Building", new LatLng(10.355426033259947, 123.91097955144363));
+        put("SHCP Building", new LatLng(10.355352813567361, 123.91040719449803));
+        put("LRC Building", new LatLng(10.353962840499877, 123.9091986435636));
+        put("MR Building", new LatLng(10.35344784070996, 123.90988370368238));
+        put("SAFAD Building", new LatLng(10.352892209800075, 123.91050896252874));
+        put("Chapel", new LatLng(10.352712231386858, 123.91142525690631));
+        put("AMONG BALAY", new LatLng(10.352712231386858, 123.91142525690631));
+    }};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scanner);
 
-        // ✅ Get destination from Intent
         destination = getIntent().getStringExtra("destination");
         if (destination == null) destination = "";
 
@@ -53,26 +71,35 @@ public class ScannerActivity extends AppCompatActivity {
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        if (allPermissionsGranted()) {
+        if (checkPermissions()) {
             startCamera();
         } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_CODE_CAMERA);
+            requestPermissions();
         }
     }
 
-    private boolean allPermissionsGranted() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+    private boolean checkPermissions() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
+               ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermissions() {
+        ActivityCompat.requestPermissions(this, new String[]{
+                Manifest.permission.CAMERA,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        }, PERMISSION_REQUEST_CODE);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_CODE_CAMERA) {
-            if (allPermissionsGranted()) {
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (checkPermissions()) {
                 startCamera();
             } else {
-                Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Camera and Location permissions are required.", Toast.LENGTH_SHORT).show();
                 finish();
             }
         }
@@ -140,7 +167,7 @@ public class ScannerActivity extends AppCompatActivity {
 
         String stopName = normalizeStopName(qrContent);
         
-        // ✅ Validation: Block if pick-up and destination are the same
+        // Block if pick-up and destination are the same
         if (!destination.isEmpty() && stopName.equalsIgnoreCase(destination)) {
             runOnUiThread(() -> {
                 Toast.makeText(this, "Pick-up and Destination cannot be the same!", Toast.LENGTH_LONG).show();
@@ -149,11 +176,41 @@ public class ScannerActivity extends AppCompatActivity {
             return;
         }
 
-        QueueManager queueManager = new QueueManager();
+        // Location verification
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            isScanning = false;
+            return;
+        }
 
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                LatLng stopLatLng = stopCoords.get(stopName);
+                if (stopLatLng != null) {
+                    float[] results = new float[1];
+                    Location.distanceBetween(location.getLatitude(), location.getLongitude(),
+                            stopLatLng.latitude, stopLatLng.longitude, results);
+                    
+                    if (results[0] > 50) {
+                        Toast.makeText(this, "You must be physically at the stop to join the queue.", Toast.LENGTH_SHORT).show();
+                        isScanning = false;
+                        return;
+                    }
+                }
+                proceedToJoinQueue(stopName);
+            } else {
+                Toast.makeText(this, "Unable to get current location. Please ensure GPS is on.", Toast.LENGTH_SHORT).show();
+                isScanning = false;
+            }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Location error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            isScanning = false;
+        });
+    }
+
+    private void proceedToJoinQueue(String stopName) {
+        QueueManager queueManager = new QueueManager();
         runOnUiThread(() -> Toast.makeText(this, "Finding your shuttle at " + stopName + "...", Toast.LENGTH_SHORT).show());
 
-        // ✅ Added destination parameter to joinQueueAndAllocate call
         queueManager.joinQueueAndAllocate(stopName, destination,
                 result -> {
                     AIShuttleManager aiManager = new AIShuttleManager(this);
@@ -173,7 +230,7 @@ public class ScannerActivity extends AppCompatActivity {
                 error -> runOnUiThread(() -> {
                     if ("No available shuttles right now".equals(error)) {
                         Toast.makeText(this,
-                                "You joined the queue at " + stopName +
+                                "You joined the queue at " + stopName + " going to " + destination +
                                         "\nWaiting for a shuttle to become available...",
                                 Toast.LENGTH_LONG).show();
                         finish();
@@ -198,8 +255,6 @@ public class ScannerActivity extends AppCompatActivity {
         if (lower.contains("dorm")) return "USC Dormitory";
         if (lower.contains("chapel")) return "Chapel";
         if (lower.contains("among")) return "AMONG BALAY";
-
-        // Remove .com if present
         return raw.replace(".com", "").trim();
     }
 
