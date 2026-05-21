@@ -34,11 +34,16 @@ public class ScannerActivity extends AppCompatActivity {
     private PreviewView previewView;
     private ExecutorService cameraExecutor;
     private boolean isScanning = false;
+    private String destination = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scanner);
+
+        // ✅ Get destination from Intent
+        destination = getIntent().getStringExtra("destination");
+        if (destination == null) destination = "";
 
         previewView = findViewById(R.id.previewView);
         ImageButton btnClose = findViewById(R.id.btnClose);
@@ -138,7 +143,8 @@ public class ScannerActivity extends AppCompatActivity {
 
         runOnUiThread(() -> Toast.makeText(this, "Finding your shuttle at " + stopName + "...", Toast.LENGTH_SHORT).show());
 
-        queueManager.joinQueueAndAllocate(stopName,
+        // ✅ Fixed: Added destination parameter to joinQueueAndAllocate call
+        queueManager.joinQueueAndAllocate(stopName, destination,
                 result -> {
                     AIShuttleManager aiManager = new AIShuttleManager(this);
                     aiManager.runAIManagement();

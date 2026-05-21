@@ -3,6 +3,7 @@ package com.usc.passakay;
 public class QueueEntry {
     private String uid;
     private String stopName;
+    private String destination; // ✅ Added field
     private long timestamp;
     private int assignedShuttleId;
     private String assignedPlate;
@@ -16,6 +17,9 @@ public class QueueEntry {
 
     public String getStopName() { return stopName; }
     public void setStopName(String stopName) { this.stopName = stopName; }
+
+    public String getDestination() { return destination; }
+    public void setDestination(String destination) { this.destination = destination; }
 
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }

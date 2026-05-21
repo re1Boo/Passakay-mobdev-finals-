@@ -37,7 +37,7 @@ public class QueueManager {
 
     // ─── Add passenger to queue ──────────────────────────
 
-    public void joinQueue(String stopName, Runnable onSuccess,
+    public void joinQueue(String stopName, String destination, Runnable onSuccess,
                           Consumer<String> onFailure) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) {
@@ -62,6 +62,7 @@ public class QueueManager {
                         Map<String, Object> userUpdates = new HashMap<>();
                         userUpdates.put("isWaiting", true);
                         userUpdates.put("waitingAt", stopName);
+                        userUpdates.put("selectedDestination", destination);
                         userUpdates.put("waitingStartTime", ServerValue.TIMESTAMP);
                         db.child("users").child(uid).updateChildren(userUpdates);
 
@@ -69,6 +70,7 @@ public class QueueManager {
                         Map<String, Object> entry = new HashMap<>();
                         entry.put("uid",               uid);
                         entry.put("stopName",           stopName);
+                        entry.put("destination",        destination);
                         entry.put("timestamp",          ServerValue.TIMESTAMP);
                         entry.put("assignedShuttleId",  -1);
                         entry.put("assignedPlate",      "");
@@ -90,8 +92,8 @@ public class QueueManager {
                 });
     }
 
-    // ✅ Fix 2: Add fallback direct allocation
-    public void joinQueueAndAllocate(String stopName,
+    // ✅ Added destination parameter
+    public void joinQueueAndAllocate(String stopName, String destination,
                                      Consumer<AssignmentResult> onAssigned,
                                      Consumer<String> onFailure) {
         String uid = FirebaseAuth.getInstance().getUid();
@@ -106,12 +108,14 @@ public class QueueManager {
         Map<String, Object> userUpdates = new HashMap<>();
         userUpdates.put("isWaiting", true);
         userUpdates.put("waitingAt", stopName);
+        userUpdates.put("selectedDestination", destination);
         userUpdates.put("waitingStartTime", ServerValue.TIMESTAMP);
         db.child("users").child(uid).updateChildren(userUpdates);
 
         Map<String, Object> entry = new HashMap<>();
         entry.put("uid",              uid);
         entry.put("stopName",         stopName);
+        entry.put("destination",      destination);
         entry.put("timestamp",        ServerValue.TIMESTAMP);
         entry.put("assignedShuttleId", -1);
         entry.put("assignedPlate",    "");
@@ -123,7 +127,7 @@ public class QueueManager {
                     Log.d(TAG, "Joined queue at " + stopName);
                     updateLegacyScanNodes(uid, stopName);
                     // Find nearest active shuttle and allocate directly
-                    findAndAllocateShuttle(uid, stopName, onAssigned, onFailure);
+                    findAndAllocateShuttle(uid, stopName, destination, onAssigned, onFailure);
                 })
                 .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
     }
@@ -176,7 +180,7 @@ public class QueueManager {
         return stopName + "_com";
     }
 
-    private void findAndAllocateShuttle(String uid, String stopName,
+    private void findAndAllocateShuttle(String uid, String stopName, String destination,
                                         Consumer<AssignmentResult> onAssigned,
                                         Consumer<String> onFailure) {
         db.child("shuttles").addListenerForSingleValueEvent(new ValueEventListener() {
@@ -237,6 +241,7 @@ public class QueueManager {
                     updates.put("allocationStatus", "assigned");
                     updates.put("isWaiting", true);
                     updates.put("waitingAt", stopName);
+                    updates.put("selectedDestination", destination);
 
                     db.child("users").child(uid).updateChildren(updates);
 

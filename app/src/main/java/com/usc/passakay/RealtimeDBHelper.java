@@ -31,6 +31,11 @@ public class RealtimeDBHelper {
                 .addOnFailureListener(e -> onFailure.accept(e.getMessage()));
     }
 
+    public void updateUserDestination(String uid, String destination) {
+        if (uid == null) return;
+        db.child("users").child(uid).child("selectedDestination").setValue(destination);
+    }
+
     public void getUser(int userId, Consumer<User> onSuccess, Consumer<String> onFailure) {
         db.child("users").child(String.valueOf(userId))
                 .addListenerForSingleValueEvent(new ValueEventListener() {

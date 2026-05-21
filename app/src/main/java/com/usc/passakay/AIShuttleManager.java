@@ -138,6 +138,7 @@ public class AIShuttleManager {
                                                 JSONObject obj = new JSONObject();
                                                 obj.put("uid",              child.getKey());
                                                 obj.put("waitingAt",        user.getWaitingAt() != null ? user.getWaitingAt() : "Unknown");
+                                                obj.put("destination",      user.getSelectedDestination() != null ? user.getSelectedDestination() : "Unknown"); // ✅ Added destination
                                                 obj.put("nearestStop",      user.getNearestStop() != null ? user.getNearestStop() : "Unknown");
                                                 obj.put("allocationStatus", user.getAllocationStatus() != null ? user.getAllocationStatus() : "waiting");
                                                 obj.put("lat",              user.getCurrentLat());
@@ -260,7 +261,7 @@ public class AIShuttleManager {
         return "You are the Dispatch AI for University of San Carlos campus shuttles.\n\n" +
             "DATA:\n" + data.toString() + "\n\n" +
             "INSTRUCTIONS:\n" +
-            "1. Match waiting passengers to active shuttles. Match their 'waitingAt' stop to shuttle routes.\n" +
+            "1. Match waiting passengers to active shuttles. Match their 'waitingAt' stop to shuttle routes and ensure the shuttle is heading towards their 'destination'.\n" +
             "2. Use the EXACT 'uid' strings provided in the data.\n" +
             "3. Use EXACT stop names from the stops list provided.\n" +
             "4. Capacity is 16 passengers per shuttle. Do not exceed it.\n" +

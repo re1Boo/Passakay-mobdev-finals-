@@ -28,6 +28,7 @@ public class User {
     public String nearestStop;
     public String recommendedStop;
     public int estimatedWaitMinutes;
+    public String selectedDestination; // ✅ Added field
 
     // Queue Related Fields
     public String assignedPlate;
@@ -111,4 +112,7 @@ public class User {
     public void setQueuePosition(int queuePosition) { this.queuePosition = queuePosition; }
     public String getAllocationStatus() { return allocationStatus; }
     public void setAllocationStatus(String allocationStatus) { this.allocationStatus = allocationStatus; }
+    
+    public String getSelectedDestination() { return selectedDestination; }
+    public void setSelectedDestination(String selectedDestination) { this.selectedDestination = selectedDestination; }
 }

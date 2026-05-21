@@ -88,6 +88,32 @@
                                 android:fontFamily="@font/kanit"
                                 android:layout_marginTop="2dp"/>
 
+                            <!-- ✅ New: Destination Dropdown -->
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/layoutDestination"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:hint="Choose Destination"
+                                app:hintTextColor="#E0E0E0"
+                                app:boxBackgroundColor="#1AFFFFFF"
+                                app:boxStrokeWidth="0dp"
+                                app:boxStrokeWidthFocused="0dp"
+                                app:endIconTint="#FFFFFF"
+                                android:textColorHint="#E0E0E0">
+
+                                <AutoCompleteTextView
+                                    android:id="@+id/spinnerDestination"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="none"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp"
+                                    android:fontFamily="@font/kanit"
+                                    android:padding="12dp"/>
+                            </com.google.android.material.textfield.TextInputLayout>
+
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnCancelRide"
                                 android:layout_width="wrap_content"

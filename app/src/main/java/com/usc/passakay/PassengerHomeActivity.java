@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -43,6 +45,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.behavior.SwipeDismissBehavior;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -73,6 +77,9 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private LinearLayout layoutTripProgress;
     private ProgressBar progressBarTrip;
     private CardView cardStatus, cardAnnouncement;
+    private TextInputLayout layoutDestination;
+    private AutoCompleteTextView spinnerDestination;
+    private String selectedDestination = "";
     private String lastDismissedAnnouncementId = "";
     
     private boolean isWaiting = false;
@@ -111,6 +118,9 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         progressBarTrip = findViewById(R.id.progressBarTrip);
         cardAnnouncement = findViewById(R.id.cardAnnouncement);
         tvAnnouncement = findViewById(R.id.tvAnnouncement);
+        
+        layoutDestination = findViewById(R.id.layoutDestination);
+        spinnerDestination = findViewById(R.id.spinnerDestination);
 
         mapView = findViewById(R.id.mapViewMain);
         mapView.onCreate(savedInstanceState);
@@ -123,7 +133,20 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
         btnWaitingStatus.setOnClickListener(v -> toggleWaitingStatus());
         btnCancelRide.setOnClickListener(v -> confirmCancelRide());
-        findViewById(R.id.fabScanQR).setOnClickListener(v -> startActivity(new Intent(this, ScannerActivity.class)));
+        
+        FloatingActionButton fabScan = findViewById(R.id.fabScanQR);
+        fabScan.setOnClickListener(v -> {
+            if (isWaiting || isRiding) {
+                startActivity(new Intent(this, ScannerActivity.class));
+            } else if (selectedDestination.isEmpty()) {
+                Toast.makeText(this, "Please select a destination before scanning!", Toast.LENGTH_SHORT).show();
+            } else {
+                Intent intent = new Intent(this, ScannerActivity.class);
+                intent.putExtra("destination", selectedDestination);
+                startActivity(intent);
+            }
+        });
+
         findViewById(R.id.fabMyLocation).setOnClickListener(v -> panToMyLocation());
         findViewById(R.id.fabAIChat).setOnClickListener(v -> startActivity(new Intent(this, AIChatActivity.class)));
 
@@ -141,6 +164,18 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         syncUserStatus();
         startStatusMonitor();
         listenForAIUpdates();
+
+        spinnerDestination.setOnItemClickListener((parent, view, position, id) -> {
+            selectedDestination = (String) parent.getItemAtPosition(position);
+            saveDestinationToDB(selectedDestination);
+        });
+    }
+
+    private void saveDestinationToDB(String dest) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid != null) {
+            db.child("users").child(uid).child("selectedDestination").setValue(dest);
+        }
     }
 
     private void listenForAIUpdates() {
@@ -173,6 +208,12 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     isRiding = currentUserObj.isRiding;
                     waitingAtStopName = currentUserObj.waitingAt != null ? currentUserObj.waitingAt : "";
                     ridingShuttleId = currentUserObj.ridingShuttleId;
+                    
+                    if (currentUserObj.selectedDestination != null && !currentUserObj.selectedDestination.isEmpty()) {
+                        selectedDestination = currentUserObj.selectedDestination;
+                        spinnerDestination.setText(selectedDestination, false);
+                    }
+                    
                     updateStatusUI();
                 }
             }
@@ -182,6 +223,13 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
     private void updateStatusUI() {
         if (currentUserObj == null) return;
+
+        // Hide destination picker if already waiting or riding
+        if (isWaiting || isRiding) {
+            layoutDestination.setVisibility(View.GONE);
+        } else {
+            layoutDestination.setVisibility(View.VISIBLE);
+        }
 
         if (isRiding) {
             cardStatus.setCardBackgroundColor(Color.parseColor("#14D337")); // Green
@@ -387,9 +435,13 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         updates.put("queuePosition", 0);
         updates.put("allocationStatus", "");
         updates.put("estimatedWaitMinutes", 0);
+        updates.put("selectedDestination", "");
         
         ref.updateChildren(updates);
         Toast.makeText(this, "Status cleared", Toast.LENGTH_SHORT).show();
+        
+        selectedDestination = "";
+        spinnerDestination.setText("", false);
     }
 
     private ShuttleStop findStopByName(String name) {
@@ -441,6 +493,10 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
     private void toggleWaitingStatus() {
         if (isRiding) return;
+        if (!isWaiting && selectedDestination.isEmpty()) {
+            Toast.makeText(this, "Please select a destination first!", Toast.LENGTH_SHORT).show();
+            return;
+        }
         updateWaitingStatusInDB(!isWaiting);
     }
 
@@ -586,13 +642,21 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 allStops.clear();
+                List<String> stopNames = new ArrayList<>();
                 for (DataSnapshot stopSnapshot : snapshot.getChildren()) {
                     ShuttleStop stop = stopSnapshot.getValue(ShuttleStop.class);
                     if (stop != null && stop.getLatitude() != 0) {
                         allStops.add(stop);
+                        stopNames.add(stop.getStopName());
                         fetchWaitingCount(stop.getStopName());
                     }
                 }
+                
+                // ✅ Populate Dropdown
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(PassengerHomeActivity.this,
+                    android.R.layout.simple_dropdown_item_1line, stopNames);
+                spinnerDestination.setAdapter(adapter);
+
                 updateMapMarkers();
                 updateNearestStopLabel();
                 new Handler(Looper.getMainLooper()).postDelayed(() -> zoomToFitAll(), 1500); 
