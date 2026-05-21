@@ -34,6 +34,8 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -44,6 +46,8 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.MutableData;
+import com.google.firebase.database.Transaction;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -77,6 +81,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
     private LocationCallback locationCallback;
     private Marker driverMarker;
     private final List<Marker> stopMarkers = new ArrayList<>();
+    private Circle currentStopCircle;
 
     // Notification UI
     private CardView cardNotification;
@@ -225,23 +230,42 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                         final int finalBoarded = boarded;
                         final int finalLeftBehind = leftBehind;
                         
-                        db.child("stopWaitingCounts").child(stopKey).runTransaction(new com.google.firebase.database.Transaction.Handler() {
+                        db.child("stopWaitingCounts").child(stopKey).runTransaction(new Transaction.Handler() {
                             @NonNull
                             @Override
-                            public com.google.firebase.database.Transaction.Result doTransaction(@NonNull com.google.firebase.database.MutableData mutableData) {
+                            public Transaction.Result doTransaction(@NonNull MutableData mutableData) {
                                 Integer count = mutableData.getValue(Integer.class);
                                 if (count != null) {
                                     mutableData.setValue(Math.max(0, count - finalBoarded));
                                 }
-                                return com.google.firebase.database.Transaction.success(mutableData);
+                                return Transaction.success(mutableData);
                             }
                             @Override
-                            public void onComplete(com.google.firebase.database.DatabaseError e, boolean b, com.google.firebase.database.DataSnapshot s) {
-                                db.updateChildren(updates).addOnSuccessListener(aVoid -> {
-                                    String msg = "Boarded " + finalBoarded + " passengers.";
-                                    if (finalLeftBehind > 0) msg += " " + finalLeftBehind + " left behind (Too far).";
-                                    Toast.makeText(ShuttleStopActivity.this, msg, Toast.LENGTH_LONG).show();
-                                });
+                            public void onComplete(DatabaseError e, boolean b, DataSnapshot s) {
+                                // Also increment current passengers on shuttle
+                                if (shuttleId != null) {
+                                    db.child("shuttles").child(shuttleId).child("currentPassengers").runTransaction(new Transaction.Handler() {
+                                        @NonNull
+                                        @Override
+                                        public Transaction.Result doTransaction(@NonNull MutableData mutableData) {
+                                            Integer current = mutableData.getValue(Integer.class);
+                                            if (current == null) current = 0;
+                                            mutableData.setValue(current + finalBoarded);
+                                            return Transaction.success(mutableData);
+                                        }
+
+                                        @Override
+                                        public void onComplete(DatabaseError error, boolean committed, DataSnapshot snapshot) {
+                                            db.updateChildren(updates).addOnSuccessListener(aVoid -> {
+                                                String msg = "Boarded " + finalBoarded + " passengers.";
+                                                if (finalLeftBehind > 0) msg += " " + finalLeftBehind + " left behind (Too far).";
+                                                Toast.makeText(ShuttleStopActivity.this, msg, Toast.LENGTH_LONG).show();
+                                            });
+                                        }
+                                    });
+                                } else {
+                                    db.updateChildren(updates);
+                                }
                             }
                         });
                     }
@@ -443,10 +467,39 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         
         applyCampusMapConstraints(googleMap);
 
+        // Radius logic for stop markers
+        googleMap.setOnMarkerClickListener(marker -> {
+            boolean isStop = false;
+            for (Marker m : stopMarkers) {
+                if (m.equals(marker)) {
+                    isStop = true;
+                    break;
+                }
+            }
+
+            if (isStop) {
+                drawStopRadius(marker.getPosition());
+            }
+            return false;
+        });
+
         LatLng shuttleLoc = new LatLng(driverLat, driverLng);
         driverMarker = googleMap.addMarker(new MarkerOptions().position(shuttleLoc).icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
         
         new Handler(Looper.getMainLooper()).postDelayed(() -> zoomToFitMarkers(), 1500);
+    }
+
+    private void drawStopRadius(LatLng position) {
+        if (currentStopCircle != null) {
+            currentStopCircle.remove();
+        }
+
+        currentStopCircle = googleMap.addCircle(new CircleOptions()
+                .center(position)
+                .radius(50) // 50 meters
+                .strokeColor(Color.parseColor("#006400")) // USC Green
+                .strokeWidth(4)
+                .fillColor(Color.parseColor("#26006400"))); // Very light USC Green
     }
 
     private void setupBottomNav() {

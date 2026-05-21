@@ -49,7 +49,7 @@ public class BaseActivity extends AppCompatActivity {
     protected Bitmap getBitmapFromView(View view) {
         view.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         view.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
         view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
         Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(), view.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -101,5 +101,16 @@ public class BaseActivity extends AppCompatActivity {
 
         // Force initial view to fit the pins perfectly
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(USC_LAT, USC_LNG), 17.8f));
+    }
+
+    /**
+     * Helper method to check if a user is within a specified radius of a stop.
+     */
+    public boolean isUserWithinStopRadius(LatLng userLoc, LatLng stopLoc) {
+        if (userLoc == null || stopLoc == null) return false;
+        float[] results = new float[1];
+        android.location.Location.distanceBetween(userLoc.latitude, userLoc.longitude,
+                stopLoc.latitude, stopLoc.longitude, results);
+        return results[0] <= 50; // 50 meters
     }
 }

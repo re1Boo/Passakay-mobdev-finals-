@@ -38,6 +38,8 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -52,6 +54,8 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.MutableData;
+import com.google.firebase.database.Transaction;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -95,6 +99,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     private final Map<String, Marker> stopMarkers = new HashMap<>();
     private final Map<String, Marker> shuttleMarkers = new HashMap<>();
     private Marker userMarker;
+    private Circle currentStopCircle;
     private final Map<String, Integer> stopWaitingCounts = new HashMap<>();
     private final Handler statusMonitorHandler = new Handler(Looper.getMainLooper());
 
@@ -231,14 +236,13 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
 
         if (isRiding) {
             cardStatus.setCardBackgroundColor(Color.parseColor("#14D337")); // Green
-            btnWaitingStatus.setText("ON RIDE");
+            btnWaitingStatus.setText("RIDING");
             btnWaitingStatus.setBackgroundTintList(ColorStateList.valueOf(0xFF4CAF50)); 
             layoutTripProgress.setVisibility(View.VISIBLE);
-            btnCancelRide.setVisibility(View.VISIBLE);
-            btnCancelRide.setText("CANCEL RIDE");
+            btnCancelRide.setVisibility(View.GONE); 
             
             if (ridingShuttleId != -1) {
-                tvUserLoc.setText("Riding Shuttle " + ridingShuttleId);
+                tvUserLoc.setText("Heading to: " + selectedDestination);
             }
         } else if (isWaiting) {
             if ("assigned".equals(currentUserObj.allocationStatus) && currentUserObj.assignedShuttleId > 0) {
@@ -309,8 +313,8 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
     }
 
     private void confirmCancelRide() {
-        String title = isRiding ? "Cancel Ride" : "Cancel Waiting";
-        String message = isRiding ? "Are you sure you want to cancel your current ride?" : "Are you sure you want to stop waiting?";
+        String title = isRiding ? "End Ride" : "Cancel Waiting";
+        String message = isRiding ? "Have you reached your destination?" : "Are you sure you want to stop waiting?";
         
         new AlertDialog.Builder(this)
                 .setTitle(title)
@@ -325,9 +329,9 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             @Override
             public void run() {
                 checkAutoStatusTransitions();
-                statusMonitorHandler.postDelayed(this, 10000);
+                statusMonitorHandler.postDelayed(this, 5000); 
             }
-        }, 10000);
+        }, 5000);
     }
 
     private void checkAutoStatusTransitions() {
@@ -339,7 +343,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             if (stop != null) {
                 float[] dist = new float[1];
                 Location.distanceBetween(userLat, userLng, stop.getLatitude(), stop.getLongitude(), dist);
-                if (dist[0] > 50) {
+                if (dist[0] > 70) { 
                     if (outOfRadiusStartTime == 0) outOfRadiusStartTime = System.currentTimeMillis();
                     else if (System.currentTimeMillis() - outOfRadiusStartTime > 180000) {
                         clearStatusInDB();
@@ -352,19 +356,26 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         }
 
         if (isRiding && ridingShuttleId != -1) {
+            // ✅ PROXIMITY DROP-OFF: Check if user has reached their destination stop
+            if (!selectedDestination.isEmpty()) {
+                ShuttleStop destStop = findStopByName(selectedDestination);
+                if (destStop != null) {
+                    float[] dist = new float[1];
+                    Location.distanceBetween(userLat, userLng, destStop.getLatitude(), destStop.getLongitude(), dist);
+                    if (dist[0] < 40) { // Within 40 meters of destination stop
+                        handleAutoDropOff(uid);
+                        return;
+                    }
+                }
+            }
+
+            // Trip progress visualization logic
             db.child("shuttles").child(String.valueOf(ridingShuttleId)).addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
                     Shuttle s = snapshot.getValue(Shuttle.class);
                     if (s != null) {
-                        float[] dist = new float[1];
-                        Location.distanceBetween(userLat, userLng, s.getCurrentLat(), s.getCurrentLng(), dist);
-                        if (dist[0] > 150) { 
-                            clearStatusInDB();
-                            Toast.makeText(PassengerHomeActivity.this, "Trip finished", Toast.LENGTH_SHORT).show();
-                        } else {
-                            updateTripProgress(s);
-                        }
+                        updateTripProgress(s);
                     }
                 }
                 @Override public void onCancelled(@NonNull DatabaseError error) {}
@@ -372,8 +383,37 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         }
     }
 
+    private void handleAutoDropOff(String uid) {
+        final int sId = ridingShuttleId;
+        if (sId == -1) return;
+
+        // 1. Decrement shuttle load atomically
+        db.child("shuttles").child(String.valueOf(sId)).child("currentPassengers")
+            .runTransaction(new Transaction.Handler() {
+                @NonNull
+                @Override
+                public Transaction.Result doTransaction(@NonNull MutableData mutableData) {
+                    Integer current = mutableData.getValue(Integer.class);
+                    if (current != null && current > 0) mutableData.setValue(current - 1);
+                    return Transaction.success(mutableData);
+                }
+
+                @Override
+                public void onComplete(DatabaseError error, boolean committed, DataSnapshot snapshot) {
+                    // 2. Clear riding status
+                    clearStatusInDB();
+                    runOnUiThread(() -> {
+                        Toast.makeText(PassengerHomeActivity.this, "🎉 You have reached your destination!", Toast.LENGTH_LONG).show();
+                        // Trigger a slight haptic/vibration
+                        android.os.Vibrator v = (android.os.Vibrator) getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                        if (v != null) v.vibrate(500);
+                    });
+                }
+            });
+    }
+
     private void updateTripProgress(Shuttle s) {
-        String[] route = {"Bunzel", "SAFAD", "PE", "MR"};
+        String[] route = {"Bunzel", "SAFAD", "PE", "MR", "LRC", "SHCP", "Portal Terminal", "USC Dormitory", "Chapel", "AMONG BALAY"};
         ShuttleStop nearest = null;
         float minDist = Float.MAX_VALUE;
         int stopIdx = 0;
@@ -392,8 +432,8 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         }
 
         if (nearest != null) {
-            int progress = (stopIdx * 25) + 10;
-            progressBarTrip.setProgress(progress);
+            int progress = (int) (((float)stopIdx / (float)route.length) * 100);
+            progressBarTrip.setProgress(Math.max(10, progress));
             String next = route[(stopIdx + 1) % route.length];
             tvNextStop.setText("Approaching: " + next);
         }
@@ -408,16 +448,16 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             db.child("scans").child(stopKey).child(uid).removeValue();
             new QueueManager().leaveQueue(waitingAtStopName);
 
-            db.child("stopWaitingCounts").child(stopKey).runTransaction(new com.google.firebase.database.Transaction.Handler() {
+            db.child("stopWaitingCounts").child(stopKey).runTransaction(new Transaction.Handler() {
                 @NonNull
                 @Override
-                public com.google.firebase.database.Transaction.Result doTransaction(@NonNull com.google.firebase.database.MutableData mutableData) {
+                public Transaction.Result doTransaction(@NonNull MutableData mutableData) {
                     Integer count = mutableData.getValue(Integer.class);
                     if (count != null && count > 0) mutableData.setValue(count - 1);
-                    return com.google.firebase.database.Transaction.success(mutableData);
+                    return Transaction.success(mutableData);
                 }
                 @Override
-                public void onComplete(com.google.firebase.database.DatabaseError databaseError, boolean b, com.google.firebase.database.DataSnapshot dataSnapshot) {}
+                public void onComplete(DatabaseError databaseError, boolean b, DataSnapshot dataSnapshot) {}
             });
         }
 
@@ -436,14 +476,15 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
         updates.put("selectedDestination", "");
         
         ref.updateChildren(updates);
-        Toast.makeText(this, "Status cleared", Toast.LENGTH_SHORT).show();
         
         selectedDestination = "";
         spinnerDestination.setText("", false);
     }
 
     private ShuttleStop findStopByName(String name) {
+        if (name == null) return null;
         for (ShuttleStop s : allStops) {
+            if (s.getStopName().equalsIgnoreCase(name.trim())) return s;
             if (s.getStopName().toLowerCase().contains(name.toLowerCase())) return s;
         }
         return null;
@@ -460,7 +501,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
             return;
         }
-        LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000).build();
+        LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000).build();
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -545,7 +586,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     
                     currentAnnouncementTimestamp = timestamp;
 
-                    // If the user already dismissed this specific announcement, keep it hidden
                     if (String.valueOf(timestamp).equals(lastDismissedAnnouncementId)) {
                         cardAnnouncement.setVisibility(View.GONE);
                         return;
@@ -557,13 +597,12 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     }
 
                     tvAnnouncement.setText(message);
-                    tvAnnouncement.setSelected(true); // For marquee effect
+                    tvAnnouncement.setSelected(true); 
                     cardAnnouncement.setVisibility(View.VISIBLE);
 
-                    // Update Badge and Time if they exist in layout
                     View newBadge = findViewById(R.id.tvNewBadge);
                     if (newBadge != null) {
-                        boolean isRecent = (System.currentTimeMillis() - timestamp) < (5 * 60 * 1000); // 5 mins
+                        boolean isRecent = (System.currentTimeMillis() - timestamp) < (5 * 60 * 1000); 
                         newBadge.setVisibility(isRecent ? View.VISIBLE : View.GONE);
                     }
 
@@ -572,12 +611,10 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                         tvTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(timestamp, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS));
                     }
 
-                    // Priority Colors
                     if ("warning".equals(priority)) {
                         cardAnnouncement.setCardBackgroundColor(Color.parseColor("#FFE0B2"));
                     } else if ("emergency".equals(priority)) {
                         cardAnnouncement.setCardBackgroundColor(Color.parseColor("#FFCDD2"));
-                        // Optional pulse animation
                         android.view.animation.Animation pulse = new android.view.animation.AlphaAnimation(1.0f, 0.6f);
                         pulse.setDuration(800);
                         pulse.setRepeatMode(android.view.animation.Animation.REVERSE);
@@ -623,10 +660,39 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             googleMap.setMyLocationEnabled(true);
         }
         
-        // Use the strict constraints defined in BaseActivity
         applyCampusMapConstraints(googleMap);
 
+        googleMap.setOnMarkerClickListener(marker -> {
+            boolean isStopMarker = false;
+            for (Marker m : stopMarkers.values()) {
+                if (m.equals(marker)) {
+                    isStopMarker = true;
+                    break;
+                }
+            }
+
+            if (isStopMarker) {
+                drawStopRadius(marker.getPosition());
+            }
+            return false; 
+        });
+
         loadStopsOnMap();
+    }
+
+    private void drawStopRadius(LatLng position) {
+        if (currentStopCircle != null) {
+            currentStopCircle.remove();
+        }
+
+        CircleOptions circleOptions = new CircleOptions()
+                .center(position)
+                .radius(50) 
+                .strokeColor(Color.parseColor("#006400")) 
+                .strokeWidth(4)
+                .fillColor(Color.parseColor("#22006400")); 
+
+        currentStopCircle = googleMap.addCircle(circleOptions);
     }
 
     private void loadStopsOnMap() {
@@ -644,7 +710,6 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     }
                 }
                 
-                // Populate Dropdown
                 ArrayAdapter<String> adapter = new ArrayAdapter<>(PassengerHomeActivity.this,
                     android.R.layout.simple_dropdown_item_1line, stopNames);
                 spinnerDestination.setAdapter(adapter);
