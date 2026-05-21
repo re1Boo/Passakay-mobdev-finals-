@@ -139,11 +139,21 @@ public class ScannerActivity extends AppCompatActivity {
         }
 
         String stopName = normalizeStopName(qrContent);
+        
+        // ✅ Validation: Block if pick-up and destination are the same
+        if (!destination.isEmpty() && stopName.equalsIgnoreCase(destination)) {
+            runOnUiThread(() -> {
+                Toast.makeText(this, "Pick-up and Destination cannot be the same!", Toast.LENGTH_LONG).show();
+                isScanning = false;
+            });
+            return;
+        }
+
         QueueManager queueManager = new QueueManager();
 
         runOnUiThread(() -> Toast.makeText(this, "Finding your shuttle at " + stopName + "...", Toast.LENGTH_SHORT).show());
 
-        // ✅ Fixed: Added destination parameter to joinQueueAndAllocate call
+        // ✅ Added destination parameter to joinQueueAndAllocate call
         queueManager.joinQueueAndAllocate(stopName, destination,
                 result -> {
                     AIShuttleManager aiManager = new AIShuttleManager(this);

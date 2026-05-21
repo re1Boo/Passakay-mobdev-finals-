@@ -61,8 +61,6 @@ import java.util.Map;
 
 public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCallback {
 
-    private static final double USC_LAT = 10.3541;
-    private static final double USC_LNG = 123.9115;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
 
     private MapView mapView;
@@ -625,15 +623,9 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             googleMap.setMyLocationEnabled(true);
         }
         
-        // Suggestion #2: Map Barrier (Campus Bounds)
-        LatLng southWest = new LatLng(10.345, 123.900);
-        LatLng northEast = new LatLng(10.365, 123.925);
-        LatLngBounds campusBounds = new LatLngBounds(southWest, northEast);
-        googleMap.setLatLngBoundsForCameraTarget(campusBounds);
-        googleMap.setMinZoomPreference(15.0f);
+        // Use the strict constraints defined in BaseActivity
+        applyCampusMapConstraints(googleMap);
 
-        LatLng campus = new LatLng(USC_LAT, USC_LNG);
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(campus, 16.5f));
         loadStopsOnMap();
     }
 
@@ -652,7 +644,7 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
                     }
                 }
                 
-                // ✅ Populate Dropdown
+                // Populate Dropdown
                 ArrayAdapter<String> adapter = new ArrayAdapter<>(PassengerHomeActivity.this,
                     android.R.layout.simple_dropdown_item_1line, stopNames);
                 spinnerDestination.setAdapter(adapter);
@@ -696,14 +688,14 @@ public class PassengerHomeActivity extends BaseActivity implements OnMapReadyCal
             }
         }
         if (validPoints == 0) {
-             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(USC_LAT, USC_LNG), 16.5f));
+             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(USC_LAT, USC_LNG), 17.5f));
              return;
         }
         LatLngBounds bounds = builder.build();
         try {
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100)); 
+            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 120)); 
         } catch (IllegalStateException e) {
-            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(bounds.getCenter(), 16.5f));
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(bounds.getCenter(), 17.5f));
         }
     }
 

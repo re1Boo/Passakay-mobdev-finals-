@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:gravity="center"
-    android:orientation="vertical">
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
+    <!-- The label card (Body of the marker) -->
     <LinearLayout
+        android:id="@+id/cardLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/rounded_card_bg"
         android:elevation="4dp"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingHorizontal="8dp"
-        android:paddingVertical="4dp">
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tvMarkerName"
@@ -34,8 +40,8 @@
                 android:id="@+id/viewDot"
                 android:layout_width="6dp"
                 android:layout_height="6dp"
-                android:background="@drawable/circle_green_light"
-                android:layout_marginEnd="4dp" />
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/circle_green_light" />
 
             <TextView
                 android:id="@+id/tvMarkerWaiting"
@@ -48,10 +54,16 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- The tail (Pointer part, merged with card outline) -->
     <ImageView
         android:id="@+id/ivMarkerPin"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:src="@drawable/ic_location_pin" />
+        android:layout_width="16dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="-2dp"
+        android:elevation="5dp"
+        android:src="@drawable/ic_pin_tail"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/cardLayout" />
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

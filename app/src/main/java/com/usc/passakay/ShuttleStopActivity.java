@@ -192,7 +192,7 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
                             Double pLat = userDetails.child("currentLat").getValue(Double.class);
                             Double pLng = userDetails.child("currentLng").getValue(Double.class);
 
-                            // Suggestion #3: Only board those physically near the shuttle (within 40 meters)
+                            // Only board those physically near the shuttle (within 40 meters)
                             boolean isNear = false;
                             if (pLat != null && pLng != null) {
                                 float[] dist = new float[1];
@@ -441,19 +441,12 @@ public class ShuttleStopActivity extends BaseActivity implements OnMapReadyCallb
         MapsInitializer.initialize(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) googleMap.setMyLocationEnabled(true);
         
-        // Suggestion #2: Map Barrier (Campus Bounds)
-        LatLng southWest = new LatLng(10.345, 123.900);
-        LatLng northEast = new LatLng(10.365, 123.925);
-        LatLngBounds campusBounds = new LatLngBounds(southWest, northEast);
-        googleMap.setLatLngBoundsForCameraTarget(campusBounds);
-        googleMap.setMinZoomPreference(15.0f);
+        applyCampusMapConstraints(googleMap);
 
         LatLng shuttleLoc = new LatLng(driverLat, driverLng);
         driverMarker = googleMap.addMarker(new MarkerOptions().position(shuttleLoc).icon(bitmapDescriptorFromVector(this, R.drawable.ic_shuttle, 28, 28)));
         
-        // Initial Zoom to campus
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(DEFAULT_LAT, DEFAULT_LNG), 17.5f));
-        zoomToFitMarkers();
+        new Handler(Looper.getMainLooper()).postDelayed(() -> zoomToFitMarkers(), 1500);
     }
 
     private void setupBottomNav() {

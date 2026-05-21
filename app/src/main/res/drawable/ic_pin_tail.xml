@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="12dp"
+    android:viewportWidth="16"
+    android:viewportHeight="12">
+    <!-- The fill for the triangle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,0 L16,0 L8,12 Z" />
+    <!-- The V-shaped stroke for the sides of the triangle -->
+    <path
+        android:strokeColor="#9E9E9E"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M0,0 L8,12 L16,0" />
+</vector>

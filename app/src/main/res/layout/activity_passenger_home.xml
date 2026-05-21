@@ -36,8 +36,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="6dp"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="8dp"
                 app:cardBackgroundColor="#14D337"
                 app:layout_constraintTop_toBottomOf="@id/header">
 
@@ -45,7 +45,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -62,11 +62,12 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="YOUR STATUS"
-                                android:textColor="#C8F5CE"
+                                android:text="CURRENT STATUS"
+                                android:textColor="#E8F5E9"
                                 android:textSize="10sp"
-                                android:letterSpacing="0.1"
-                                android:fontFamily="@font/kanit"/>
+                                android:letterSpacing="0.15"
+                                android:fontFamily="@font/kanit"
+                                android:textStyle="bold"/>
 
                             <TextView
                                 android:id="@+id/tvUserLoc"
@@ -74,9 +75,10 @@
                                 android:layout_height="wrap_content"
                                 android:text="Detecting location..."
                                 android:textColor="#FFFFFF"
-                                android:textSize="15sp"
+                                android:textSize="18sp"
                                 android:textStyle="bold"
-                                android:fontFamily="@font/kanit"/>
+                                android:fontFamily="@font/kanit"
+                                android:layout_marginTop="2dp"/>
 
                             <TextView
                                 android:id="@+id/tvNearestStopDistance"
@@ -86,22 +88,25 @@
                                 android:textColor="#FFFFFF"
                                 android:textSize="12sp"
                                 android:fontFamily="@font/kanit"
-                                android:layout_marginTop="2dp"/>
+                                android:alpha="0.9"
+                                android:layout_marginTop="4dp"/>
 
-                            <!-- ✅ New: Destination Dropdown -->
+                            <!-- Improved Destination Picker -->
                             <com.google.android.material.textfield.TextInputLayout
                                 android:id="@+id/layoutDestination"
-                                style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="Choose Destination"
-                                app:hintTextColor="#E0E0E0"
-                                app:boxBackgroundColor="#1AFFFFFF"
-                                app:boxStrokeWidth="0dp"
-                                app:boxStrokeWidthFocused="0dp"
+                                android:layout_marginTop="12dp"
+                                android:hint="Where are you going?"
+                                app:hintTextColor="#E8F5E9"
+                                app:boxStrokeColor="#FFFFFF"
+                                app:boxCornerRadiusTopStart="12dp"
+                                app:boxCornerRadiusTopEnd="12dp"
+                                app:boxCornerRadiusBottomStart="12dp"
+                                app:boxCornerRadiusBottomEnd="12dp"
                                 app:endIconTint="#FFFFFF"
-                                android:textColorHint="#E0E0E0">
+                                android:textColorHint="#E8F5E9">
 
                                 <AutoCompleteTextView
                                     android:id="@+id/spinnerDestination"
@@ -111,20 +116,21 @@
                                     android:textColor="#FFFFFF"
                                     android:textSize="14sp"
                                     android:fontFamily="@font/kanit"
-                                    android:padding="12dp"/>
+                                    android:padding="14dp"
+                                    android:background="@android:color/transparent"/>
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnCancelRide"
                                 android:layout_width="wrap_content"
-                                android:layout_height="32dp"
-                                android:text="CANCEL RIDE"
-                                android:textSize="9sp"
+                                android:layout_height="36dp"
+                                android:text="CANCEL SELECTION"
+                                android:textSize="10sp"
                                 android:textColor="#FFFFFF"
                                 android:visibility="gone"
-                                app:backgroundTint="#FF5252"
+                                app:backgroundTint="#D32F2F"
                                 app:cornerRadius="12dp"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="12dp"
                                 android:paddingTop="0dp"
                                 android:paddingBottom="0dp"
                                 android:insetTop="0dp"
@@ -136,14 +142,15 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical"
                                 android:visibility="gone"
-                                android:layout_marginTop="8dp">
+                                android:layout_marginTop="12dp">
 
                                 <ProgressBar
                                     android:id="@+id/progressBarTrip"
                                     style="?android:attr/progressBarStyleHorizontal"
                                     android:layout_width="match_parent"
-                                    android:layout_height="4dp"
+                                    android:layout_height="6dp"
                                     android:progressTint="#FFEA08"
+                                    android:progressBackgroundTint="#33FFFFFF"
                                     android:progress="0"
                                     android:max="100"/>
 
@@ -153,8 +160,9 @@
                                     android:layout_height="wrap_content"
                                     android:text="Heading to SAFAD"
                                     android:textColor="#FFFFFF"
-                                    android:textSize="11sp"
-                                    android:layout_marginTop="2dp"/>
+                                    android:textSize="12sp"
+                                    android:fontFamily="@font/kanit"
+                                    android:layout_marginTop="4dp"/>
                             </LinearLayout>
 
                         </LinearLayout>
@@ -166,8 +174,10 @@
                             android:text="NOT WAITING"
                             android:textSize="11sp"
                             android:textStyle="bold"
+                            android:textColor="#1A1A1A"
                             app:backgroundTint="#FFEA08"
-                            app:cornerRadius="20dp"/>
+                            app:cornerRadius="20dp"
+                            android:layout_marginStart="12dp"/>
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -219,7 +229,7 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
-        <!-- TOP LAYER: Announcement Bar moved outside inner layout to ensure clickability -->
+        <!-- Announcement Bar -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardAnnouncement"
             android:layout_width="match_parent"
@@ -227,7 +237,7 @@
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:layout_marginTop="140dp"
-            app:cardCornerRadius="12dp"
+            app:cardCornerRadius="16dp"
             app:cardElevation="12dp"
             app:cardBackgroundColor="#FFF9C4"
             android:visibility="gone">

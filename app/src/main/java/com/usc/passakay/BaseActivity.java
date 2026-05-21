@@ -13,13 +13,20 @@ import android.view.ViewGroup;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.UUID;
 
 public class BaseActivity extends AppCompatActivity {
+
+    protected static final double USC_LAT = 10.3541;
+    protected static final double USC_LNG = 123.9115;
 
     protected void logout() {
         FirebaseAuth.getInstance().signOut();
@@ -29,10 +36,6 @@ public class BaseActivity extends AppCompatActivity {
         finish();
     }
 
-    /**
-     * Generates a persistent unique ID for this app installation.
-     * Prevents conflicts between multiple emulators or devices.
-     */
     protected String getAppInstanceId() {
         SharedPreferences prefs = getSharedPreferences("PassakayPrefs", MODE_PRIVATE);
         String appId = prefs.getString("app_instance_id", null);
@@ -66,5 +69,37 @@ public class BaseActivity extends AppCompatActivity {
         Canvas canvas = new Canvas(bitmap);
         vectorDrawable.draw(canvas);
         return BitmapDescriptorFactory.fromBitmap(bitmap);
+    }
+
+    /**
+     * Configures strict map boundaries and camera constraints for the USC Talamban Campus.
+     * Tightens barriers to only surround the bus stop pins and locks scrolling.
+     */
+    protected void applyCampusMapConstraints(GoogleMap map) {
+        if (map == null) return;
+
+        // Ultra-precise boundaries strictly surrounding all bus stop pins
+        // Min Lat: 10.3519 (Bunzel), Max Lat: 10.3554 (PE)
+        // Min Lng: 123.9091 (LRC), Max Lng: 123.9139 (Portal)
+        LatLng southWest = new LatLng(10.3518, 123.9090);
+        LatLng northEast = new LatLng(10.3556, 123.9142);
+        LatLngBounds pinsBounds = new LatLngBounds(southWest, northEast);
+
+        // Constrain camera target to these tight bounds - creates a scroll barrier
+        map.setLatLngBoundsForCameraTarget(pinsBounds);
+
+        // Set zoom limits:
+        // 17.5f is deep enough to see the stops clearly within the tight bounds
+        map.setMinZoomPreference(17.5f);
+        map.setMaxZoomPreference(20.0f);
+
+        // Clean up UI for a minimalist, focused map experience
+        map.getUiSettings().setMapToolbarEnabled(false);
+        map.getUiSettings().setCompassEnabled(false);
+        map.getUiSettings().setTiltGesturesEnabled(false);
+        map.getUiSettings().setRotateGesturesEnabled(false);
+
+        // Force initial view to fit the pins perfectly
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(USC_LAT, USC_LNG), 17.8f));
     }
 }
